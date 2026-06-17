@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import { modalities } from "../data/mockData";
+import { modalities } from "../constants/mockData";
 import { SectionHeading } from "./SectionHeading";
 
 export function ModalidadesSection({ onSelect }) {

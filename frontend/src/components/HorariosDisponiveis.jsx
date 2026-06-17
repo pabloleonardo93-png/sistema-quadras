@@ -1,4 +1,4 @@
-import { availableTimes } from "../data/mockData";
+import { availableTimes } from "../constants/mockData";
 
 export function HorariosDisponiveis({ selectedTime, onSelect }) {
   return (

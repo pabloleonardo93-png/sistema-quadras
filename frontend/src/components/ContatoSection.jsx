@@ -6,7 +6,7 @@ import {
   Navigation,
   Phone,
 } from "lucide-react";
-import { arenaInfo } from "../data/mockData";
+import { arenaInfo } from "../constants/mockData";
 import { Button } from "./Button";
 
 export function ContatoSection() {

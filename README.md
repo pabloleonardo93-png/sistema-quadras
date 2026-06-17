@@ -1,38 +1,79 @@
-# Arena Onda
+# Sistema de Quadras
 
-Frontend público para uma arena de quadras de areia, criado com React e Vite.
-O projeto usa dados simulados e está preparado para receber uma API REST em uma
-etapa futura. Não há backend neste repositório.
+Repositório do sistema de locação de quadras de areia.
 
-## Executar localmente
+## Estrutura atual
+
+```text
+sistema-quadras/
+├── frontend/
+│   ├── src/
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── eslint.config.js
+│   └── vite.config.js
+├── .gitattributes
+├── .gitignore
+└── README.md
+```
+
+- `frontend/`: aplicação React/Vite com o site público atual e a prévia do painel administrativo.
+- Backend ainda não foi organizado nesta etapa.
+- Arquivos de Git e documentação geral ficam na raiz do repositório.
+- Arquivos específicos do frontend ficam dentro de `frontend/`.
+
+## Rodar o frontend
 
 Requisitos:
 
 - Node.js 20.19+ ou 22.12+
 - npm
 
-No PowerShell do Windows:
+A partir da raiz do repositório:
 
-```powershell
-npm.cmd install
-npm.cmd run dev
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-Abra o endereço exibido pelo Vite, normalmente `http://localhost:5173`.
+Depois acesse:
 
-## Build de produção
+- Site público: `http://localhost:5173/`
+- Painel admin: `http://localhost:5173/admin`
+- Login admin: `http://localhost:5173/admin/login`
+- Dashboard admin: `http://localhost:5173/admin/dashboard`
 
-```powershell
-npm.cmd run build
-npm.cmd run preview
+## Scripts do frontend
+
+Execute sempre dentro da pasta `frontend`:
+
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
 ```
 
-## Estrutura
+## Estrutura do frontend
 
-- `src/components`: componentes visuais e seções da página.
-- `src/data/mockData.js`: quadras, modalidades, horários e contato simulados.
-- `src/styles/global.css`: tokens, layout, responsividade e animações.
-- `src/App.jsx`: composição da página e estado compartilhado da reserva.
+```text
+frontend/src/
+├── assets/
+├── components/
+├── constants/
+├── contexts/
+├── hooks/
+├── pages/
+├── routes/
+├── services/
+├── utils/
+├── App.jsx
+├── main.jsx
+└── index.css
+```
 
-O formulário apenas confirma a reserva visualmente. Nenhum dado é persistido ou
-enviado para um serviço externo nesta etapa.
+## Segurança
+
+Não versionar `.env`, senhas, tokens, chaves de API, credenciais de banco, Render ou Aiven. O `.gitignore` da raiz ignora `node_modules`, `dist`, `.env`, caches locais e arquivos sensíveis comuns em qualquer pasta do repositório.

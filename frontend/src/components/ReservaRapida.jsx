@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import {
   CalendarCheck,
-  Check,
   ChevronLeft,
   Clock3,
   MapPin,
   PartyPopper,
   UserRound,
 } from "lucide-react";
-import { courts, modalities } from "../data/mockData";
+import { courts, modalities } from "../constants/mockData";
 import { Button } from "./Button";
 import { HorariosDisponiveis } from "./HorariosDisponiveis";
 import { SectionHeading } from "./SectionHeading";
@@ -268,3 +267,4 @@ export function ReservaRapida({
     </section>
   );
 }
+

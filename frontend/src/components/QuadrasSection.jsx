@@ -1,4 +1,4 @@
-import { courts } from "../data/mockData";
+import { courts } from "../constants/mockData";
 import { CardQuadra } from "./CardQuadra";
 import { SectionHeading } from "./SectionHeading";
 

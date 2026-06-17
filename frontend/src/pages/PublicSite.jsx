@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { ContatoSection } from "./components/ContatoSection";
-import { Footer } from "./components/Footer";
-import { Header } from "./components/Header";
-import { HeroSection } from "./components/HeroSection";
-import { MobileBookingBar } from "./components/MobileBookingBar";
-import { ModalidadesSection } from "./components/ModalidadesSection";
-import { QuadrasSection } from "./components/QuadrasSection";
-import { ReservaRapida } from "./components/ReservaRapida";
-import { SobreArena } from "./components/SobreArena";
+import { ContatoSection } from "../components/ContatoSection";
+import { Footer } from "../components/Footer";
+import { Header } from "../components/Header";
+import { HeroSection } from "../components/HeroSection";
+import { MobileBookingBar } from "../components/MobileBookingBar";
+import { ModalidadesSection } from "../components/ModalidadesSection";
+import { QuadrasSection } from "../components/QuadrasSection";
+import { ReservaRapida } from "../components/ReservaRapida";
+import { SobreArena } from "../components/SobreArena";
 
-function App() {
+export function PublicSite() {
   const [selectedModality, setSelectedModality] = useState("Beach Tennis");
   const [selectedCourt, setSelectedCourt] = useState("onda-1");
 
@@ -50,5 +50,3 @@ function App() {
     </>
   );
 }
-
-export default App;
