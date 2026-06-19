@@ -74,6 +74,3 @@ frontend/src/
 └── index.css
 ```
 
-## Segurança
-
-Não versionar `.env`, senhas, tokens, chaves de API, credenciais de banco, Render ou Aiven. O `.gitignore` da raiz ignora `node_modules`, `dist`, `.env`, caches locais e arquivos sensíveis comuns em qualquer pasta do repositório.
