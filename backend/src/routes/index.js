@@ -1,0 +1,24 @@
+import { Router } from "express";
+import arquivoRoutes from "./arquivoRoutes.js";
+import authRoutes from "./authRoutes.js";
+import clienteRoutes from "./clienteRoutes.js";
+import comunicadoRoutes from "./comunicadoRoutes.js";
+import horarioRoutes from "./horarioRoutes.js";
+import logRoutes from "./logRoutes.js";
+import modalidadeRoutes from "./modalidadeRoutes.js";
+import quadraRoutes from "./quadraRoutes.js";
+import relatorioRoutes from "./relatorioRoutes.js";
+import reservaRoutes from "./reservaRoutes.js";
+
+const router = Router();
+router.use("/auth", authRoutes);
+router.use("/clientes", clienteRoutes);
+router.use("/quadras", quadraRoutes);
+router.use("/modalidades", modalidadeRoutes);
+router.use("/horarios", horarioRoutes);
+router.use("/reservas", reservaRoutes);
+router.use("/comunicados", comunicadoRoutes);
+router.use("/arquivos", arquivoRoutes);
+router.use("/relatorios", relatorioRoutes);
+router.use("/logs", logRoutes);
+export default router;

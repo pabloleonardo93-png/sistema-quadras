@@ -3,17 +3,26 @@ node_modules/
 dist/
 .vite/
 coverage/
+uploads/
+logs/
 
 # Environment variables and secrets
 .env
 .env.*
-!.env.example
+.env.example
 *.pem
 *.key
 *.p12
 *.pfx
 credentials*.json
 secrets*.json
+
+# Local databases and dumps
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+postgres_data/
 
 # Logs and local caches
 *.log
