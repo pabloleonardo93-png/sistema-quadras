@@ -1,8 +1,7 @@
-import { courts } from "../constants/mockData";
 import { CardQuadra } from "./CardQuadra";
 import { SectionHeading } from "./SectionHeading";
 
-export function QuadrasSection({ onSelect }) {
+export function QuadrasSection({ courts = [], error = "", isLoading = false, onSelect }) {
   return (
     <section className="section courts" id="quadras">
       <div className="page-shell">
@@ -26,9 +25,16 @@ export function QuadrasSection({ onSelect }) {
         </div>
 
         <div className="courts__grid">
-          {courts.map((court) => (
-            <CardQuadra key={court.id} court={court} onReserve={onSelect} />
-          ))}
+          {isLoading && <p className="section-state">Carregando quadras...</p>}
+          {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+          {!isLoading && !error && courts.length === 0 && (
+            <p className="section-state">Nenhuma quadra encontrada.</p>
+          )}
+          {!isLoading &&
+            !error &&
+            courts.map((court) => (
+              <CardQuadra key={court.id} court={court} onReserve={onSelect} />
+            ))}
         </div>
       </div>
     </section>

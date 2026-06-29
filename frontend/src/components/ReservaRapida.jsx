@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   ChevronLeft,
@@ -7,7 +7,8 @@ import {
   PartyPopper,
   UserRound,
 } from "lucide-react";
-import { courts, modalities } from "../constants/mockData";
+import { listarHorariosDisponiveis } from "../services/horarioService";
+import { criarReservaPublica } from "../services/reservaService";
 import { Button } from "./Button";
 import { HorariosDisponiveis } from "./HorariosDisponiveis";
 import { SectionHeading } from "./SectionHeading";
@@ -21,48 +22,143 @@ const getTomorrow = () => {
 const emptyCustomer = { name: "", phone: "", email: "" };
 
 export function ReservaRapida({
+  courts = [],
+  modalities = [],
   selectedModality,
   selectedCourt,
   onModalityChange,
   onCourtChange,
 }) {
   const [date, setDate] = useState(getTomorrow);
-  const [selectedTime, setSelectedTime] = useState("18:00");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [availableTimes, setAvailableTimes] = useState([]);
+  const [timesLoading, setTimesLoading] = useState(false);
+  const [timesError, setTimesError] = useState("");
   const [customer, setCustomer] = useState(emptyCustomer);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedCourtData = useMemo(
     () => courts.find((court) => court.id === selectedCourt),
-    [selectedCourt],
+    [courts, selectedCourt],
   );
+
+  const selectedModalityData = useMemo(
+    () => modalities.find((modality) => modality.name === selectedModality),
+    [modalities, selectedModality],
+  );
+
+  const selectedHorario = useMemo(
+    () => availableTimes.find((time) => time.id === selectedTime),
+    [availableTimes, selectedTime],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function carregarHorarios() {
+      if (!selectedCourtData?.apiId || !date) {
+        setAvailableTimes([]);
+        setSelectedTime("");
+        return;
+      }
+
+      setTimesLoading(true);
+      setTimesError("");
+
+      try {
+        const horarios = await listarHorariosDisponiveis({
+          quadraId: selectedCourtData.apiId,
+          modalidadeId: selectedModalityData?.apiId,
+          data: date,
+        });
+
+        if (!active) return;
+
+        const normalizados = horarios.map((horario) => ({
+          id: String(horario.id),
+          apiId: horario.id,
+          time: String(horario.horaInicio || "").slice(0, 5),
+          available: horario.status === "disponivel",
+        }));
+
+        setAvailableTimes(normalizados);
+        setSelectedTime((current) =>
+          normalizados.some((horario) => horario.id === current)
+            ? current
+            : normalizados[0]?.id || "",
+        );
+      } catch {
+        if (!active) return;
+        setAvailableTimes([]);
+        setSelectedTime("");
+        setTimesError("Nao foi possivel carregar os horarios disponiveis.");
+      } finally {
+        if (active) setTimesLoading(false);
+      }
+    }
+
+    carregarHorarios();
+
+    return () => {
+      active = false;
+    };
+  }, [date, selectedCourtData?.apiId, selectedModalityData?.apiId]);
 
   const handleCustomerChange = (event) => {
     const { name, value } = event.target;
     setCustomer((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (
       !selectedModality ||
       !selectedCourt ||
       !date ||
       !selectedTime ||
+      !selectedCourtData?.apiId ||
+      !selectedModalityData?.apiId ||
+      !selectedHorario?.apiId ||
       !customer.name ||
       !customer.phone ||
       !customer.email
     ) {
-      setError("Preencha todos os campos para confirmar sua simulação.");
+      setError("Preencha todos os campos para confirmar sua reserva.");
       return;
     }
+
     setError("");
-    setConfirmed(true);
+    setIsSubmitting(true);
+
+    try {
+      await criarReservaPublica({
+        nome: customer.name,
+        telefone: customer.phone,
+        email: customer.email,
+        quadraId: selectedCourtData.apiId,
+        modalidadeId: selectedModalityData.apiId,
+        horarioId: selectedHorario.apiId,
+      });
+      setSuccessMessage("Reserva realizada com sucesso! Aguarde a confirmacao da arena.");
+      setConfirmed(true);
+    } catch (requestError) {
+      if (requestError.status === 409) {
+        setError("Esse horario acabou de ser reservado. Escolha outro horario.");
+      } else {
+        setError(requestError.message || "Erro ao conectar com a API. Tente novamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetBooking = () => {
     setConfirmed(false);
     setCustomer(emptyCustomer);
+    setSuccessMessage("");
   };
 
   return (
@@ -71,7 +167,7 @@ export function ReservaRapida({
         <SectionHeading
           eyebrow="Reserva rápida"
           title="SEU HORÁRIO EM POUCOS TOQUES."
-          description="Escolha a partida, selecione um horário e pronto. Nesta demonstração, nenhum pagamento será realizado."
+          description="Escolha a partida, selecione um horario disponivel e envie sua solicitacao para a arena."
           inverse
         />
 
@@ -94,7 +190,7 @@ export function ReservaRapida({
               </span>
               <span>
                 <Clock3 aria-hidden="true" size={18} />
-                {selectedTime || "--:--"}
+                {selectedHorario?.time || "--:--"}
               </span>
             </div>
             <div className="booking-summary__location">
@@ -106,7 +202,9 @@ export function ReservaRapida({
             </div>
             <div className="booking-summary__price">
               <span>Valor estimado</span>
-              <strong>R$ 90<small>,00</small></strong>
+              <strong>
+                R$ {Number(selectedCourtData?.valorHora || 0).toFixed(2).replace(".", ",")}
+              </strong>
             </div>
             <p>Pagamento realizado presencialmente no dia da partida.</p>
           </aside>
@@ -118,22 +216,21 @@ export function ReservaRapida({
                   <PartyPopper aria-hidden="true" size={34} />
                 </span>
                 <span className="booking-confirmation__eyebrow">
-                  Simulação concluída
+                  Reserva solicitada
                 </span>
                 <h3>QUADRA NA AGENDA, {customer.name.split(" ")[0]}!</h3>
                 <p>
-                  Reservamos visualmente a <strong>{selectedCourtData?.name}</strong>{" "}
-                  para <strong>{selectedModality}</strong>, às{" "}
-                  <strong>{selectedTime}</strong>. A confirmação real será
-                  habilitada na próxima etapa do projeto.
+                  {successMessage} A <strong>{selectedCourtData?.name}</strong>{" "}
+                  foi solicitada para <strong>{selectedModality}</strong>, as{" "}
+                  <strong>{selectedHorario?.time}</strong>.
                 </p>
                 <div className="booking-confirmation__code">
-                  <span>Código da simulação</span>
-                  <strong>ONDA-2048</strong>
+                  <span>Status</span>
+                  <strong>Pendente</strong>
                 </div>
                 <Button variant="dark" onClick={resetBooking}>
                   <ChevronLeft aria-hidden="true" size={18} />
-                  Fazer nova simulação
+                  Fazer nova reserva
                 </Button>
               </div>
             ) : (
@@ -197,12 +294,15 @@ export function ReservaRapida({
                     <span>02</span>
                     <div>
                       <strong>Selecione o horário</strong>
-                      <small>Disponibilidade simulada</small>
+                      <small>Disponibilidade real da API</small>
                     </div>
                   </div>
                   <HorariosDisponiveis
+                    error={timesError}
+                    isLoading={timesLoading}
                     selectedTime={selectedTime}
                     onSelect={setSelectedTime}
+                    times={availableTimes}
                   />
                 </div>
 
@@ -253,10 +353,10 @@ export function ReservaRapida({
                 <div className="form-submit">
                   <span>
                     <UserRound aria-hidden="true" size={18} />
-                    Seus dados são usados apenas nesta demonstração.
+                    Seus dados serao enviados para confirmar a reserva.
                   </span>
-                  <Button type="submit" showArrow>
-                    Confirmar simulação
+                  <Button type="submit" showArrow disabled={isSubmitting}>
+                    {isSubmitting ? "Enviando..." : "Confirmar reserva"}
                   </Button>
                 </div>
               </form>
@@ -267,4 +367,3 @@ export function ReservaRapida({
     </section>
   );
 }
-

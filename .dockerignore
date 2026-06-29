@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+.env.example
+
+**/node_modules
+**/dist
+**/build
+**/.vite
+**/coverage
+**/*.log
+
+backend/uploads
+postgres_data
+README.md

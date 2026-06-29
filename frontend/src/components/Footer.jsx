@@ -29,7 +29,7 @@ export function Footer() {
       </div>
       <div className="page-shell footer__bottom">
         <span>© 2026 Arena Onda. Todos os direitos reservados.</span>
-        <span>Frontend demonstrativo • Dados simulados</span>
+        <span>Conectado a API da Arena Onda</span>
       </div>
     </footer>
   );

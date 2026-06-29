@@ -32,8 +32,6 @@ backend/
 │   └── server.js
 ├── test/
 ├── uploads/
-├── .env.example
-├── docker-compose.yml
 ├── eslint.config.js
 └── package.json
 ~~~
@@ -62,7 +60,7 @@ Defina com atenção:
 - **JWT_SECRET** para uma chave longa e aleatória;
 - **ADMIN_SEED_PASSWORD** para a senha do administrador local.
 
-Os arquivos **.env** e **.env.example** são ignorados pelo Git. Nunca envie credenciais reais ao repositório.
+O arquivo **.env** é ignorado pelo Git. Nunca envie credenciais reais ao repositório.
 
 ## Banco de dados
 
@@ -290,4 +288,27 @@ npm run lint
 - reserva duplicada protegida na API e no banco;
 - **.env**, uploads, logs e dependências fora do Git.
 
-O frontend ainda não foi conectado à API. Essa integração pertence à Parte 5.
+## Dockerfile do backend
+
+O backend tambem possui um `Dockerfile` proprio. Ele instala as dependencias Node, copia a API e inicia com:
+
+~~~powershell
+npm start
+~~~
+
+Para subir apenas o banco local, use o `docker-compose.yml` da raiz do projeto:
+
+~~~powershell
+cd ..
+docker compose up -d postgres
+~~~
+
+Para subir o sistema inteiro em containers, use o `docker-compose.yml` da raiz do projeto. Nesse fluxo, o backend fica interno na rede Docker e o Nginx da pasta `nginx/` expõe o frontend e encaminha `/api` para a API:
+
+~~~powershell
+cd ..
+New-Item .env -ItemType File
+docker compose up --build
+~~~
+
+Nesse fluxo completo, o servico `backend` aguarda o PostgreSQL, executa migrations e seeders, e entao inicia a API internamente na porta 3000. Do navegador, acesse a API por `http://localhost:8080/api`.

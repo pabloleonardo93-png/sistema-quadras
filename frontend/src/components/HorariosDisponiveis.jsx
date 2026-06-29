@@ -1,6 +1,10 @@
-import { availableTimes } from "../constants/mockData";
-
-export function HorariosDisponiveis({ selectedTime, onSelect }) {
+export function HorariosDisponiveis({
+  error = "",
+  isLoading = false,
+  selectedTime,
+  times = [],
+  onSelect,
+}) {
   return (
     <div className="time-picker">
       <div className="time-picker__heading">
@@ -8,14 +12,19 @@ export function HorariosDisponiveis({ selectedTime, onSelect }) {
         <small>1 hora por reserva</small>
       </div>
       <div className="time-grid">
-        {availableTimes.map(({ time, available }) => (
+        {isLoading && <p className="section-state">Carregando horarios...</p>}
+        {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+        {!isLoading && !error && times.length === 0 && (
+          <p className="section-state">Nenhum horario disponivel para esta escolha.</p>
+        )}
+        {!isLoading && !error && times.map(({ id, time, available = true }) => (
           <button
-            key={time}
-            className={selectedTime === time ? "is-selected" : ""}
+            key={id}
+            className={selectedTime === id ? "is-selected" : ""}
             type="button"
             disabled={!available}
-            onClick={() => onSelect(time)}
-            aria-pressed={selectedTime === time}
+            onClick={() => onSelect(id)}
+            aria-pressed={selectedTime === id}
           >
             {time}
           </button>

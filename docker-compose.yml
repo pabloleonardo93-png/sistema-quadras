@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arena-onda-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Configure POSTGRES_DB no arquivo .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Configure POSTGRES_USER no arquivo .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no arquivo .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: arena-onda-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:8080}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:?Configure DB_NAME no arquivo .env}
+      DB_USER: ${DB_USER:?Configure DB_USER no arquivo .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET no arquivo .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      ADMIN_SEED_NAME: ${ADMIN_SEED_NAME:-Administrador Local}
+      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:?Configure ADMIN_SEED_EMAIL no arquivo .env}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:?Configure ADMIN_SEED_PASSWORD no arquivo .env}
+      UPLOAD_DIR: ${UPLOAD_DIR:-uploads}
+      UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE:-5242880}
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    volumes:
+      - backend_uploads:/app/uploads
+    command: sh -c "npm run db:migrate && npm run db:seed && npm start"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: arena-onda-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  backend_uploads:
