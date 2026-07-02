@@ -34,7 +34,8 @@ export const criar = executarAssincrono(async (req, res) => {
 
 export const listar = executarAssincrono(async (req, res) => {
   const where = {};
-  if (req.query.quadraId) where.quadraId = validarId(req.query.quadraId, "Quadra");
+  const quadraId = req.query.quadraId || req.query.quadra_id;
+  if (quadraId) where.quadraId = validarId(quadraId, "Quadra");
   if (req.query.data) where.data = validarData(req.query.data);
   if (req.query.status) {
     where.status = validarStatus(req.query.status, ["disponivel", "reservado", "bloqueado"]);
@@ -48,8 +49,12 @@ export const listar = executarAssincrono(async (req, res) => {
 });
 
 export const listarDisponiveis = executarAssincrono(async (req, res) => {
-  const where = { status: "disponivel" };
-  if (req.query.quadraId) where.quadraId = validarId(req.query.quadraId, "Quadra");
+  const where = {
+    status: "disponivel",
+    horaInicio: { [Op.gte]: "08:00", [Op.lt]: "23:00" },
+  };
+  const quadraId = req.query.quadraId || req.query.quadra_id;
+  if (quadraId) where.quadraId = validarId(quadraId, "Quadra");
   where.data = req.query.data ? validarData(req.query.data) : { [Op.gte]: hojeLocal() };
   const horarios = await Horario.findAll({
     where,
@@ -63,7 +68,7 @@ async function alterarBloqueio(req, res, novoStatus) {
   const horario = await Horario.findByPk(validarId(req.params.id, "Horário"));
   if (!horario) throw new ErroDaAplicacao("Horário não encontrado.", 404);
   const reservaAtiva = await Reserva.findOne({
-    where: { horarioId: horario.id, status: { [Op.in]: ["pendente", "confirmada"] } },
+    where: { horarioId: horario.id, status: { [Op.in]: ["aguardando_pagamento", "confirmada"] } },
   });
   if (reservaAtiva) throw new ErroDaAplicacao("O horário possui uma reserva ativa e não pode ser alterado.", 409);
 

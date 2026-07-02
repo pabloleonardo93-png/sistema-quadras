@@ -49,10 +49,11 @@ A pasta **uploads/** é criada automaticamente e não é versionada.
 ~~~powershell
 cd backend
 npm install
-New-Item .env -ItemType File
 ~~~
 
-Abra o arquivo local **.env** e configure as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR** e **UPLOAD_MAX_SIZE**.
+Use o arquivo **.env** da raiz do projeto. O backend carrega esse arquivo mesmo quando você roda comandos dentro da pasta `backend`.
+
+Configure nele as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR**, **UPLOAD_MAX_SIZE**, **APP_PUBLIC_URL**, **API_PUBLIC_URL**, **MERCADO_PAGO_ACCESS_TOKEN**, **MERCADO_PAGO_WEBHOOK_URL** e **MERCADO_PAGO_WEBHOOK_SECRET**.
 
 Defina com atenção:
 
@@ -60,7 +61,7 @@ Defina com atenção:
 - **JWT_SECRET** para uma chave longa e aleatória;
 - **ADMIN_SEED_PASSWORD** para a senha do administrador local.
 
-O arquivo **.env** é ignorado pelo Git. Nunca envie credenciais reais ao repositório.
+O arquivo **.env** da raiz é ignorado pelo Git. Nunca envie credenciais reais ao repositório.
 
 ## Banco de dados
 
@@ -124,7 +125,7 @@ GET http://localhost:3000/api/health
 
 ## Autenticação
 
-O administrador é criado pelo seeder com **ADMIN_SEED_EMAIL** e **ADMIN_SEED_PASSWORD** definidos no arquivo local **.env**.
+O administrador é criado pelo seeder com **ADMIN_SEED_EMAIL** e **ADMIN_SEED_PASSWORD** definidos no **.env** da raiz.
 
 ~~~http
 POST /api/auth/login
@@ -208,6 +209,8 @@ A senha nunca é retornada pela API.
 ### Reservas
 
 - **POST /api/reservas**: público;
+- **POST /api/reservas/:id/pagamento**: público, cria checkout do Mercado Pago com o valor da reserva;
+- **GET /api/reservas/:id/status**: público, retorna status resumido da reserva e do pagamento;
 - **GET /api/reservas**: administrador;
 - **GET /api/reservas/:id**: administrador;
 - **PATCH /api/reservas/:id/confirmar**: administrador;
@@ -225,6 +228,40 @@ A senha nunca é retornada pela API.
 ~~~
 
 A API bloqueia uma segunda reserva para a mesma quadra, data e hora com HTTP 409. A proteção existe no **reservaService.js** e também em um índice único parcial do PostgreSQL. Ao cancelar uma reserva, o horário volta a ficar disponível.
+
+### Pagamentos
+
+- **POST /api/reservas/:id/pagamento**: cria uma preferência do Mercado Pago para a reserva informada;
+- **POST /api/pagamentos/mercadopago/criar**: cria reserva e checkout em um fluxo único;
+- **POST /api/webhooks/mercadopago**: recebe notificações do Mercado Pago e atualiza a reserva;
+- **POST /api/pagamentos/mercadopago/webhook** e **POST /api/pagamentos/mercado-pago/webhook**: aliases mantidos por compatibilidade.
+
+O token do Mercado Pago fica somente no **.env** da raiz, lido pelo backend:
+
+~~~env
+MERCADO_PAGO_ACCESS_TOKEN=seu_access_token_do_mercado_pago
+APP_PUBLIC_URL=http://localhost:5173
+API_PUBLIC_URL=http://localhost:3000
+MERCADO_PAGO_WEBHOOK_URL=https://seu-dominio.com/api/webhooks/mercadopago
+MERCADO_PAGO_WEBHOOK_SECRET=segredo_do_webhook_se_configurado
+~~~
+
+Status de reservas:
+
+- `aguardando_pagamento`;
+- `confirmada`;
+- `cancelada`;
+- `expirada`.
+
+Status de pagamentos:
+
+- `pendente`;
+- `aprovado`;
+- `recusado`;
+- `cancelado`;
+- `estornado`.
+
+Cada reserva possui `valorTotal`, `pagamentoStatus`, `mercadoPagoPreferenceId`, `mercadoPagoPaymentId`, `pagamentoUrl`, `pagamentoCriadoEm` e `pagoEm`. Quando o Mercado Pago retorna pagamento aprovado, a reserva passa para **confirmada** e o pagamento para **aprovado**. Se o pagamento for cancelado, recusado, estornado ou expirar, a reserva é cancelada ou expirada e o horário volta a ficar disponível.
 
 ### Comunicados
 

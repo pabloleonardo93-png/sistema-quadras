@@ -10,6 +10,8 @@ import AdminQuadras from "../pages/AdminQuadras";
 import AdminRelatorios from "../pages/AdminRelatorios";
 import AdminReservas from "../pages/AdminReservas";
 import PrivateRoute from "./PrivateRoute";
+import PagamentoRetorno from "../pages/PagamentoRetorno";
+import ReservaPage from "../pages/ReservaPage";
 
 function protectedPage(page) {
   return <PrivateRoute>{page}</PrivateRoute>;
@@ -20,6 +22,9 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/reserva" element={<ReservaPage />} />
+        <Route path="/reserva/dados" element={<ReservaPage />} />
+        <Route path="/pagamento/retorno" element={<PagamentoRetorno />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={protectedPage(<AdminDashboard />)} />

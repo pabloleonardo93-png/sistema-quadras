@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("./env.cjs");
 
 const configuracao = {
   username: process.env.DB_USER,

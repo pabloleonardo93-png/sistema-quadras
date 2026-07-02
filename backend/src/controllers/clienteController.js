@@ -16,7 +16,21 @@ function dadosDoCliente(corpo) {
 export const criar = executarAssincrono(async (req, res) => {
   const dados = dadosDoCliente(req.body);
   const existente = await Cliente.findOne({ where: { email: dados.email } });
-  if (existente) throw new ErroDaAplicacao("Já existe um cliente com esse e-mail.", 409);
+  if (existente) {
+    if (existente.status !== "ativo") {
+      throw new ErroDaAplicacao("Cliente encontrado, mas está inativo.", 409);
+    }
+
+    await existente.update({
+      nome: dados.nome,
+      telefone: dados.telefone,
+    });
+
+    return res.json({
+      mensagem: "Cliente já cadastrado. Dados atualizados para a reserva.",
+      cliente: existente,
+    });
+  }
 
   const cliente = await Cliente.create(dados);
   await registrarLog({

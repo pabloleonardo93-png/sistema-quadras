@@ -6,12 +6,31 @@ const statusIcons = {
   maintenance: Wrench,
 };
 
-export function CardQuadra({ court, onReserve }) {
+export function CardQuadra({ court }) {
   const StatusIcon = statusIcons[court.status];
   const isDisabled = court.status === "maintenance";
+  const bookingUrl = `/reserva?quadra=${encodeURIComponent(court.id)}`;
+  const openBooking = () => {
+    if (!isDisabled) {
+      window.open(bookingUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (!isDisabled && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      openBooking();
+    }
+  };
 
   return (
-    <article className="court-card">
+    <article
+      className="court-card"
+      onClick={openBooking}
+      onKeyDown={handleKeyDown}
+      role={isDisabled ? undefined : "link"}
+      tabIndex={isDisabled ? undefined : 0}
+    >
       <div className="court-card__image">
         <img src={court.image} alt={`Vista da ${court.name}`} />
         <span className={`status status--${court.status}`}>
@@ -29,15 +48,22 @@ export function CardQuadra({ court, onReserve }) {
             <span key={modality}>{modality}</span>
           ))}
         </div>
-        <button
-          className="court-card__action"
-          type="button"
-          disabled={isDisabled}
-          onClick={() => onReserve(court.id)}
-        >
-          {isDisabled ? "Indisponível" : "Reservar esta quadra"}
-          {!isDisabled && <ArrowRight aria-hidden="true" size={18} />}
-        </button>
+        {isDisabled ? (
+          <span className="court-card__action court-card__action--disabled" aria-disabled="true">
+            Indisponível
+          </span>
+        ) : (
+          <a
+            className="court-card__action"
+            href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Reservar esta quadra
+            <ArrowRight aria-hidden="true" size={18} />
+          </a>
+        )}
       </div>
     </article>
   );

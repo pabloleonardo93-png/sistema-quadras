@@ -1,6 +1,6 @@
-# Arena Onda Frontend
+# Pe na Areia Frontend
 
-Frontend React + Vite da Arena Onda, integrado com a API REST do projeto.
+Frontend React + Vite do Pe na Areia, integrado com a API REST do projeto.
 
 ## Requisitos
 
@@ -46,7 +46,11 @@ Para testar o login, use o administrador criado pelo seeder do backend.
 
 ## Reserva publica
 
-No site publico, selecione modalidade, quadra, data, horario disponivel e informe nome, telefone e e-mail. O frontend cria o cliente e envia a reserva para `POST /api/reservas`.
+No site publico, a secao `Reservas` leva o cliente para o formulario interno. Ao confirmar a reserva, o frontend chama `POST /api/pagamentos/mercadopago/criar`, recebe a URL do checkout do Mercado Pago com o valor calculado da quadra e redireciona o cliente para pagamento.
+
+A pagina `/pagamento/retorno` consulta `GET /api/reservas/:id/status` e mostra se o pagamento ficou aprovado, pendente, recusado, cancelado ou estornado.
+
+O token do Mercado Pago nunca deve ficar no frontend. Configure `MERCADO_PAGO_ACCESS_TOKEN` somente no backend ou no `.env` da raiz usado pelo Docker.
 
 ## Build e lint
 

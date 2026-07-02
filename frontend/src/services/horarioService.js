@@ -6,7 +6,11 @@ export async function listarHorarios(params) {
 }
 
 export async function listarHorariosDisponiveis(params) {
-  const response = await api.get("/horarios/disponiveis", params);
+  const response = await api.get("/horarios/disponiveis", {
+    quadraId: params?.quadraId,
+    modalidadeId: params?.modalidadeId,
+    data: params?.data,
+  });
   return response.horarios || [];
 }
 

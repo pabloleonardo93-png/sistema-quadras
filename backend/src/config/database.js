@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./env.js";
 import { Sequelize } from "sequelize";
 
 const sequelize = new Sequelize(

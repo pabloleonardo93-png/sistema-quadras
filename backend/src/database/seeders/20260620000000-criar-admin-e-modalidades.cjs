@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("../../config/env.cjs");
 const bcrypt = require("bcrypt");
 const { QueryTypes } = require("sequelize");
 
@@ -19,34 +19,37 @@ const modalidadesIniciais = [
 
 const quadrasIniciais = [
   {
-    nome: "Onda 01",
+    nome: "Areia 01",
+    nomeAntigo: "Onda 01",
     descricao: "Quadra central",
     valor_hora: 90,
-    imagem_url: "https://shoppingdabahia.com.br/data/files/30/55/50/F1/AA2138103A760038180808FF/FPD%20ARENA%20N6%20_1_.png",
+    imagem_url: "/images/quadras/areia-01.jpeg",
   },
   {
-    nome: "Onda 02",
+    nome: "Areia 02",
+    nomeAntigo: "Onda 02",
     descricao: "Quadra panoramica",
     valor_hora: 85,
-    imagem_url: "https://shoppingdabahia.com.br/data/files/77/45/85/E1/AA2138103A760038180808FF/FPD%20ARENA%20N2%20_1_%20_1_.png",
+    imagem_url: "/images/quadras/areia-02.jpeg",
   },
   {
-    nome: "Onda 03",
+    nome: "Areia 03",
+    nomeAntigo: "Onda 03",
     descricao: "Quadra de treino",
     valor_hora: 75,
-    imagem_url: "https://shoppingdabahia.com.br/data/files/0E/45/BD/E1/AA2138103A760038180808FF/FPD%20ARENA%20N%20_1_.png",
+    imagem_url: "/images/quadras/areia-03.webp",
   },
 ];
 
 const comunicadosIniciais = [
   {
     titulo: "Agenda aberta para a semana",
-    mensagem: "Reserve seu horario pelo site e confirme sua partida com a equipe da arena.",
+    mensagem: "Reserve seu hor\u00e1rio pelo site e confirme sua partida com a equipe do complexo.",
     destaque: true,
   },
   {
     titulo: "Chegue 10 minutos antes",
-    mensagem: "A tolerancia ajuda a manter a grade de jogos organizada para todos.",
+    mensagem: "A toler\u00e2ncia ajuda a manter a grade de jogos organizada para todos.",
     destaque: false,
   },
 ];
@@ -59,6 +62,24 @@ function dataFutura(dias) {
   const data = new Date();
   data.setDate(data.getDate() + dias);
   return data.toISOString().slice(0, 10);
+}
+
+function datasFuturasPadrao() {
+  const datas = [];
+  for (let offset = 0; offset <= 60; offset += 1) {
+    datas.push(dataFutura(offset));
+  }
+  return datas;
+}
+
+function janelasDeFuncionamento() {
+  const janelas = [];
+  for (let hora = 8; hora < 23; hora += 1) {
+    const horaInicio = String(hora).padStart(2, "0") + ":00";
+    const horaFim = String(hora + 1).padStart(2, "0") + ":00";
+    janelas.push([horaInicio, horaFim]);
+  }
+  return janelas;
 }
 
 async function existePorCampo(queryInterface, tabela, campo, valor) {
@@ -107,10 +128,32 @@ async function criarModalidades(queryInterface, agora) {
 
 async function criarQuadras(queryInterface, agora) {
   for (const quadra of quadrasIniciais) {
-    const existe = await existePorCampo(queryInterface, "quadras", "nome", quadra.nome);
-    if (!existe) {
+    const { nomeAntigo, ...dadosQuadra } = quadra;
+    const nomes = [quadra.nome, nomeAntigo].filter(Boolean);
+    const registros = await queryInterface.sequelize.query(
+      "SELECT id, nome FROM quadras WHERE nome IN (:nomes)",
+      { replacements: { nomes }, type: QueryTypes.SELECT },
+    );
+    const quadraAtual = registros.find((registro) => registro.nome === quadra.nome);
+    const quadraAntiga = registros.find((registro) => registro.nome === nomeAntigo);
+
+    if (!quadraAtual && quadraAntiga) {
+      await queryInterface.bulkUpdate("quadras", {
+        nome: quadra.nome,
+        atualizado_em: agora,
+      }, { id: quadraAntiga.id });
+    }
+
+    if (quadraAtual && quadraAntiga) {
+      await queryInterface.bulkUpdate("quadras", {
+        status: "inativa",
+        atualizado_em: agora,
+      }, { id: quadraAntiga.id });
+    }
+
+    if (!quadraAtual && !quadraAntiga) {
       await queryInterface.bulkInsert("quadras", [{
-        ...quadra,
+        ...dadosQuadra,
         status: "ativa",
         criado_em: agora,
         atualizado_em: agora,
@@ -156,17 +199,22 @@ async function criarHorarios(queryInterface, agora) {
     "SELECT id FROM quadras WHERE status = 'ativa' AND nome IN (:nomes)",
     { replacements: { nomes: nomesQuadras }, type: QueryTypes.SELECT },
   );
-  const janelas = [
-    ["07:00", "08:00"],
-    ["08:00", "09:00"],
-    ["18:00", "19:00"],
-    ["19:00", "20:00"],
-    ["20:00", "21:00"],
-  ];
+  const janelas = janelasDeFuncionamento();
 
   for (const quadra of quadras) {
-    for (let offset = 1; offset <= 7; offset += 1) {
-      const data = dataFutura(offset);
+    const datasExistentes = await queryInterface.sequelize.query(
+      "SELECT DISTINCT data FROM horarios WHERE quadra_id = :quadraId",
+      { replacements: { quadraId: quadra.id }, type: QueryTypes.SELECT },
+    );
+    const hoje = dataFutura(0);
+    const datas = Array.from(new Set([
+      ...datasFuturasPadrao(),
+      ...datasExistentes.map((registro) => String(registro.data).slice(0, 10)),
+    ]))
+      .filter((data) => data >= hoje)
+      .sort();
+
+    for (const data of datas) {
       for (const [horaInicio, horaFim] of janelas) {
         const horarios = await queryInterface.sequelize.query(
           "SELECT id FROM horarios WHERE quadra_id = :quadraId AND data = :data AND hora_inicio = :horaInicio LIMIT 1",
@@ -194,8 +242,12 @@ async function criarHorarios(queryInterface, agora) {
 
 async function criarComunicados(queryInterface, agora) {
   for (const comunicado of comunicadosIniciais) {
-    const existe = await existePorCampo(queryInterface, "comunicados", "titulo", comunicado.titulo);
-    if (!existe) {
+    const comunicados = await queryInterface.sequelize.query(
+      "SELECT id FROM comunicados WHERE titulo = :titulo LIMIT 1",
+      { replacements: { titulo: comunicado.titulo }, type: QueryTypes.SELECT },
+    );
+
+    if (comunicados.length === 0) {
       await queryInterface.bulkInsert("comunicados", [{
         ...comunicado,
         status: "publicado",
@@ -203,6 +255,13 @@ async function criarComunicados(queryInterface, agora) {
         criado_em: agora,
         atualizado_em: agora,
       }]);
+    } else {
+      await queryInterface.bulkUpdate("comunicados", {
+        mensagem: comunicado.mensagem,
+        destaque: comunicado.destaque,
+        status: "publicado",
+        atualizado_em: agora,
+      }, { titulo: comunicado.titulo });
     }
   }
 }

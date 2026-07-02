@@ -1,8 +1,27 @@
 export const courtImages = {
-  onda1:
-    "https://shoppingdabahia.com.br/data/files/30/55/50/F1/AA2138103A760038180808FF/FPD%20ARENA%20N6%20_1_.png",
-  onda2:
-    "https://shoppingdabahia.com.br/data/files/77/45/85/E1/AA2138103A760038180808FF/FPD%20ARENA%20N2%20_1_%20_1_.png",
-  onda3:
-    "https://shoppingdabahia.com.br/data/files/0E/45/BD/E1/AA2138103A760038180808FF/FPD%20ARENA%20N%20_1_.png",
+  areia1: "/images/quadras/areia-01.jpeg",
+  areia2: "/images/quadras/areia-02.jpeg",
+  areia3: "/images/quadras/areia-03.webp",
+  onda1: "/images/quadras/areia-01.jpeg",
+  onda2: "/images/quadras/areia-02.jpeg",
+  onda3: "/images/quadras/areia-03.webp",
 };
+
+export const courtImagesByName = {
+  "Areia 01": courtImages.areia1,
+  "Areia 02": courtImages.areia2,
+  "Areia 03": courtImages.areia3,
+  "Onda 01": courtImages.areia1,
+  "Onda 02": courtImages.areia2,
+  "Onda 03": courtImages.areia3,
+};
+
+export function getCourtImage(quadra, index = 0) {
+  const fallbacks = [courtImages.areia1, courtImages.areia2, courtImages.areia3];
+
+  return (
+    courtImagesByName[quadra?.nome] ||
+    quadra?.imagemUrl ||
+    fallbacks[index % fallbacks.length]
+  );
+}

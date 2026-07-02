@@ -12,10 +12,10 @@ export function HorariosDisponiveis({
         <small>1 hora por reserva</small>
       </div>
       <div className="time-grid">
-        {isLoading && <p className="section-state">Carregando horarios...</p>}
+        {isLoading && <p className="section-state">Carregando horários...</p>}
         {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
         {!isLoading && !error && times.length === 0 && (
-          <p className="section-state">Nenhum horario disponivel para esta escolha.</p>
+          <p className="section-state">Nenhum horário disponível para esta escolha.</p>
         )}
         {!isLoading && !error && times.map(({ id, time, available = true }) => (
           <button

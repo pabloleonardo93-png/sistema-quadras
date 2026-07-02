@@ -7,6 +7,7 @@ import {
   Phone,
 } from "lucide-react";
 import { arenaInfo } from "../constants/arenaInfo";
+import { brand } from "../constants/brand";
 import { Button } from "./Button";
 
 export function ContatoSection() {
@@ -17,8 +18,8 @@ export function ContatoSection() {
           <span className="contact__eyebrow">Chegue junto</span>
           <h2>A AREIA ESTÁ TE ESPERANDO.</h2>
           <p>
-            Estamos a poucos minutos das principais avenidas da região, com
-            estacionamento e acesso fácil.
+            Confira o endereço, veja o caminho pelo mapa e fale com a equipe
+            para tirar dúvidas sobre horários, grupos e reservas especiais.
           </p>
 
           <div className="contact__items">
@@ -71,7 +72,7 @@ export function ContatoSection() {
             <span>
               <Navigation aria-hidden="true" size={23} fill="currentColor" />
             </span>
-            <strong>Arena Onda</strong>
+            <strong>{brand.name}</strong>
             <small>Você chegou.</small>
           </div>
           <Button

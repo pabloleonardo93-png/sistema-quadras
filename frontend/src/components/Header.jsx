@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Menu, Waves, X } from "lucide-react";
-import { Button } from "./Button";
+import { CalendarDays, Menu, X } from "lucide-react";
+import { brand } from "../constants/brand";
+import { BrandMark } from "./BrandMark";
 
 const links = [
   { label: "Modalidades", href: "#modalidades" },
   { label: "Quadras", href: "#quadras" },
-  { label: "A arena", href: "#sobre" },
+  { label: "Reservas", href: "#quadras" },
+  { label: "O espaço", href: "#sobre" },
+  { label: "Eventos", href: "#eventos" },
   { label: "Contato", href: "#contato" },
 ];
 
-export function Header({ onReserve }) {
+export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -24,12 +27,12 @@ export function Header({ onReserve }) {
 
   return (
     <header className={`site-header ${scrolled ? "site-header--scrolled" : ""}`}>
-      <a className="brand" href="#inicio" aria-label="Arena Onda, início">
+      <a className="brand" href="#inicio" aria-label={`${brand.name}, início`}>
         <span className="brand__mark">
-          <Waves aria-hidden="true" size={25} strokeWidth={2.4} />
+          <BrandMark title={brand.name} />
         </span>
         <span className="brand__name">
-          ARENA <strong>ONDA</strong>
+          PÉ NA <strong>AREIA</strong>
         </span>
       </a>
 
@@ -38,25 +41,26 @@ export function Header({ onReserve }) {
         aria-label="Navegação principal"
       >
         {links.map((link) => (
-          <a key={link.href} href={link.href} onClick={closeMenu}>
+          <a key={link.label} href={link.href} onClick={closeMenu}>
             {link.label}
           </a>
         ))}
-        <Button
-          className="site-nav__mobile-cta"
-          onClick={() => {
-            closeMenu();
-            onReserve();
-          }}
+        <a
+          className="button button--primary site-nav__mobile-cta"
+          href="#quadras"
+          onClick={closeMenu}
         >
-          Reservar agora
-        </Button>
+          <span>Reservar agora</span>
+        </a>
       </nav>
 
-      <Button className="site-header__cta" onClick={onReserve}>
+      <a
+        className="button button--primary site-header__cta"
+        href="#quadras"
+      >
         <CalendarDays aria-hidden="true" size={18} />
-        Reservar quadra
-      </Button>
+        <span>Reservar quadra</span>
+      </a>
 
       <button
         className="menu-toggle"

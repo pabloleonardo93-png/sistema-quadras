@@ -8,6 +8,17 @@ import {
 } from "lucide-react";
 import { Button } from "./Button";
 
+const tickerItems = [
+  "03 quadras premium",
+  "Beach Tennis",
+  "Futevôlei",
+  "Vôlei de Areia",
+  "Confraternizações",
+  "Areia tratada",
+  "Iluminação profissional",
+  "Agenda online",
+];
+
 export function HeroSection({ onReserve }) {
   const todayLabel = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -36,8 +47,8 @@ export function HeroSection({ onReserve }) {
             <span>COMEÇA AQUI.</span>
           </h1>
           <p>
-            Quadras preparadas, clima leve e reserva sem complicação para você
-            jogar mais.
+            Reserve online, acompanhe a disponibilidade real e chegue com a
+            partida organizada para jogar mais.
           </p>
           <div className="hero__actions">
             <Button onClick={onReserve} showArrow>
@@ -90,15 +101,14 @@ export function HeroSection({ onReserve }) {
         </aside>
       </div>
 
-      <div className="hero__ticker" aria-label="Destaques da arena">
-        <div>
-          <span>03 quadras premium</span>
-          <i />
-          <span>Areia tratada</span>
-          <i />
-          <span>Iluminação profissional</span>
-          <i />
-          <span>Vestiários completos</span>
+      <div className="hero__ticker" aria-label="Destaques do complexo">
+        <div className="hero__ticker-track">
+          {[...tickerItems, ...tickerItems].map((item, index) => (
+            <span className="hero__ticker-item" key={`${item}-${index}`}>
+              {item}
+              <i aria-hidden="true" />
+            </span>
+          ))}
         </div>
       </div>
     </section>

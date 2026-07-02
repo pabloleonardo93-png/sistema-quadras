@@ -1,10 +1,10 @@
 import { CardQuadra } from "./CardQuadra";
 import { SectionHeading } from "./SectionHeading";
 
-export function QuadrasSection({ courts = [], error = "", isLoading = false, onSelect }) {
+export function QuadrasSection({ courts = [], error = "", isLoading = false }) {
   return (
-    <section className="section courts" id="quadras">
-      <div className="page-shell">
+    <section className="section courts">
+      <div className="page-shell" id="quadras">
         <div className="courts__heading-row">
           <SectionHeading
             eyebrow="Nossa estrutura"
@@ -32,9 +32,7 @@ export function QuadrasSection({ courts = [], error = "", isLoading = false, onS
           )}
           {!isLoading &&
             !error &&
-            courts.map((court) => (
-              <CardQuadra key={court.id} court={court} onReserve={onSelect} />
-            ))}
+            courts.map((court) => <CardQuadra key={court.id} court={court} />)}
         </div>
       </div>
     </section>

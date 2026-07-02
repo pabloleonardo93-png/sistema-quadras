@@ -54,7 +54,7 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     throw new ApiError(
-      data?.mensagem || "Erro ao conectar com a API. Tente novamente.",
+      data?.mensagem || data?.erro || "Erro ao conectar com a API. Tente novamente.",
       response.status,
       data,
     );

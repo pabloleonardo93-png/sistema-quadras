@@ -1,4 +1,8 @@
-# Dependencies and generated files
+
+.env
+.env.*
+.env.example
+
 node_modules/
 dist/
 build/
@@ -6,12 +10,7 @@ build/
 coverage/
 uploads/
 logs/
-
-# Environment variables and secrets
-.env
-.env.*
-.env.example
-!.env.local.example
+.DS_Store
 *.pem
 *.key
 *.p12
@@ -19,7 +18,7 @@ logs/
 credentials*.json
 secrets*.json
 
-# Local databases and dumps
+
 *.db
 *.sqlite
 *.sqlite3
@@ -34,12 +33,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Editors and operating systems
+
 .idea/
 .vscode/
 *.swp
 *.swo
-.DS_Store
 Thumbs.db
 desktop.ini
 __pycache__/

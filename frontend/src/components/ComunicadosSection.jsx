@@ -12,9 +12,9 @@ export function ComunicadosSection({
     <section className="section announcements" id="comunicados">
       <div className="page-shell">
         <SectionHeading
-          eyebrow="Avisos da arena"
+          eyebrow="Avisos do complexo"
           title="COMUNICADOS IMPORTANTES."
-          description="Promocoes, manutencoes e avisos publicados pela equipe."
+          description="Promoções, manutenções e avisos publicados pela equipe."
         />
 
         {isLoading && <p className="section-state">Carregando comunicados...</p>}

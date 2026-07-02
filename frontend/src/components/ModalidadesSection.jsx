@@ -1,4 +1,5 @@
 import { ArrowUpRight, CircleDot } from "lucide-react";
+import { brand } from "../constants/brand";
 import { SectionHeading } from "./SectionHeading";
 
 export function ModalidadesSection({
@@ -12,7 +13,7 @@ export function ModalidadesSection({
       <div className="page-shell">
         <SectionHeading
           eyebrow="Escolha seu jogo"
-          title="TRÊS JEITOS DE ENTRAR NA AREIA."
+          title="MODALIDADES PARA CADA RITMO."
           description="Do primeiro saque ao último ponto, você encontra a estrutura certa para jogar no seu ritmo."
         />
 
@@ -35,7 +36,7 @@ export function ModalidadesSection({
                   </span>
                   <Icon aria-hidden="true" size={34} strokeWidth={1.7} />
                 </div>
-                <span className="modality-card__eyebrow">{modality.eyebrow || "Arena Onda"}</span>
+                <span className="modality-card__eyebrow">{modality.eyebrow || brand.name}</span>
                 <h3>{modality.name}</h3>
                 <p>{modality.description}</p>
                 <button type="button" onClick={() => onSelect(modality.name)}>

@@ -19,7 +19,13 @@ export const criar = executarAssincrono(async (req, res) => {
 export const listar = executarAssincrono(async (req, res) => {
   const where = {};
   if (req.query.status) {
-    where.status = validarStatus(req.query.status, ["pendente", "confirmada", "cancelada", "finalizada"]);
+    where.status = validarStatus(req.query.status, [
+      "aguardando_pagamento",
+      "confirmada",
+      "cancelada",
+      "expirada",
+      "finalizada",
+    ]);
   }
   if (req.query.data) where.data = validarData(req.query.data);
   if (req.query.quadraId) where.quadraId = validarId(req.query.quadraId, "Quadra");
@@ -29,6 +35,26 @@ export const listar = executarAssincrono(async (req, res) => {
     order: [["data", "DESC"], ["horaInicio", "DESC"]],
   });
   res.json({ reservas });
+});
+
+export const statusPublico = executarAssincrono(async (req, res) => {
+  const reserva = await Reserva.findByPk(validarId(req.params.id, "Reserva"), {
+    include: inclusoesReserva,
+  });
+  if (!reserva) throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
+  res.json({
+    reserva: {
+      id: reserva.id,
+      status: reserva.status,
+      pagamentoStatus: reserva.pagamentoStatus,
+      valorTotal: reserva.valorTotal,
+      data: reserva.data,
+      horaInicio: reserva.horaInicio,
+      horaFim: reserva.horaFim,
+      quadra: reserva.quadra ? { id: reserva.quadra.id, nome: reserva.quadra.nome } : null,
+      modalidade: reserva.modalidade ? { id: reserva.modalidade.id, nome: reserva.modalidade.nome } : null,
+    },
+  });
 });
 
 export const buscarPorId = executarAssincrono(async (req, res) => {
@@ -50,10 +76,10 @@ function mudarStatus(req, res, statusEsperados, novoStatus, mensagem) {
 }
 
 export const confirmar = executarAssincrono(async (req, res) => {
-  await mudarStatus(req, res, ["pendente"], "confirmada", "Reserva confirmada com sucesso.");
+  await mudarStatus(req, res, ["aguardando_pagamento"], "confirmada", "Reserva confirmada com sucesso.");
 });
 export const cancelar = executarAssincrono(async (req, res) => {
-  await mudarStatus(req, res, ["pendente", "confirmada"], "cancelada", "Reserva cancelada com sucesso.");
+  await mudarStatus(req, res, ["aguardando_pagamento", "confirmada"], "cancelada", "Reserva cancelada com sucesso.");
 });
 export const finalizar = executarAssincrono(async (req, res) => {
   await mudarStatus(req, res, ["confirmada"], "finalizada", "Reserva finalizada com sucesso.");

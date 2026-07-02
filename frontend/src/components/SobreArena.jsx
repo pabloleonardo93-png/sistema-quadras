@@ -1,4 +1,5 @@
 import { Coffee, Droplets, Lightbulb, UsersRound } from "lucide-react";
+import { brand } from "../constants/brand";
 import { SectionHeading } from "./SectionHeading";
 
 const features = [
@@ -19,9 +20,15 @@ const features = [
   },
   {
     icon: UsersRound,
-    title: "Para todos os níveis",
-    description: "Do primeiro treino ao campeonato entre amigos.",
+    title: "Jogo para grupos",
+    description: "Do treino casual ao campeonato entre amigos.",
   },
+];
+
+const metrics = [
+  { value: "07h", label: "abertura" },
+  { value: "23h", label: "último horário" },
+  { value: "100%", label: "agenda online" },
 ];
 
 export function SobreArena() {
@@ -43,10 +50,18 @@ export function SobreArena() {
 
         <div className="about__content">
           <SectionHeading
-            eyebrow="Sobre a arena"
-            title="MAIS QUE QUADRA. UM PONTO DE ENCONTRO."
-            description="A Arena Onda nasceu para aproximar esporte, bem-estar e gente boa. Aqui, cada detalhe foi pensado para você chegar, jogar e querer ficar."
+            eyebrow="Sobre o espaço"
+            title="ESTRUTURA PARA JOGAR, FICAR E VOLTAR."
+            description={`O ${brand.name} aproxima esporte, sol e bons encontros. A experiência foi pensada para você escolher o horário, chegar com tranquilidade e aproveitar a partida.`}
           />
+          <div className="about__metrics" aria-label="Resumo da estrutura">
+            {metrics.map((metric) => (
+              <span key={metric.label}>
+                <strong>{metric.value}</strong>
+                {metric.label}
+              </span>
+            ))}
+          </div>
           <div className="about__features">
             {features.map(({ icon: Icon, title, description }) => (
               <article key={title}>

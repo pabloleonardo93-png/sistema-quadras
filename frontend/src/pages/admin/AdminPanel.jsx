@@ -65,6 +65,8 @@ import {
   buscarRelatorioOcupacao,
   buscarRelatorioReservas,
 } from "../../services/relatorioService";
+import { BrandMark } from "../../components/BrandMark";
+import { brand } from "../../constants/brand";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -80,13 +82,13 @@ const navItems = [
 const pageTitles = {
   dashboard: {
     eyebrow: "Painel de operação",
-    title: "Visão geral da arena",
+    title: "Visão geral do complexo",
     description: "Resumo visual das reservas, ocupação e alertas do dia.",
   },
   reservas: {
     eyebrow: "Gestão de reservas",
-    title: "Reservas da arena",
-    description: "Acompanhe solicitacoes, confirmacoes, cancelamentos e finalizacoes.",
+    title: "Reservas do complexo",
+    description: "Acompanhe solicitações, confirmações, cancelamentos e finalizações.",
   },
   quadras: {
     eyebrow: "Estrutura",
@@ -96,7 +98,7 @@ const pageTitles = {
   modalidades: {
     eyebrow: "Modalidades",
     title: "Modalidades cadastradas",
-    description: "Gerencie esportes disponiveis, descricoes e status.",
+    description: "Gerencie esportes disponíveis, descrições e status.",
   },
   horarios: {
     eyebrow: "Grade operacional",
@@ -111,12 +113,12 @@ const pageTitles = {
   comunicados: {
     eyebrow: "Comunicação",
     title: "Comunicados e avisos",
-    description: "Prepare promoções, avisos de manutenção e regras da arena.",
+    description: "Prepare promoções, avisos de manutenção e regras do complexo.",
   },
   relatorios: {
     eyebrow: "Indicadores",
     title: "Relatórios básicos",
-    description: "Dados reais para leitura rapida do desempenho da arena.",
+    description: "Dados reais para leitura rápida do desempenho do complexo.",
   },
 };
 
@@ -128,10 +130,22 @@ function routeToPath(route) {
 
 function statusReserva(status) {
   const labels = {
-    pendente: "Pendente",
+    aguardando_pagamento: "Aguardando pagamento",
     confirmada: "Confirmada",
     cancelada: "Cancelada",
+    expirada: "Expirada",
     finalizada: "Finalizada",
+  };
+  return labels[status] || status || "--";
+}
+
+function statusPagamento(status) {
+  const labels = {
+    pendente: "Pendente",
+    aprovado: "Aprovado",
+    recusado: "Recusado",
+    cancelado: "Cancelado",
+    estornado: "Estornado",
   };
   return labels[status] || status || "--";
 }
@@ -139,7 +153,7 @@ function statusReserva(status) {
 function statusQuadra(status) {
   const labels = {
     ativa: "Ativa",
-    manutencao: "Manutencao",
+    manutencao: "Manutenção",
     inativa: "Inativa",
   };
   return labels[status] || status || "--";
@@ -227,13 +241,13 @@ export function AdminLogin() {
           Voltar ao site público
         </a>
         <div className="admin-login__mark">
-          <Waves aria-hidden="true" size={38} />
+          <BrandMark title={brand.name} />
         </div>
-        <span className="admin-login__eyebrow">Arena Onda Admin</span>
+        <span className="admin-login__eyebrow">{brand.adminName}</span>
         <h1>Controle a areia sem perder o ritmo do jogo.</h1>
         <p>
           Painel para o gestor acompanhar reservas, quadras, clientes e
-          comunicados com autenticacao real.
+          comunicados com autenticação real.
         </p>
         <div className="admin-login__security">
           <ShieldCheck aria-hidden="true" />
@@ -320,9 +334,9 @@ function AdminLayout({
         <div className="admin-sidebar__top">
           <a className="admin-logo" href="/">
             <span>
-              <Waves aria-hidden="true" />
+              <BrandMark title={brand.name} />
             </span>
-            <strong>ARENA ONDA</strong>
+            <strong>{brand.nameUpper}</strong>
           </a>
           <button className="admin-sidebar__close" type="button" onClick={onCloseSidebar}>
             <X aria-hidden="true" />
@@ -422,7 +436,7 @@ function DashboardScreen() {
         setDashboard(dashboardData);
         setReservas(reservasData);
       } catch {
-        if (active) setError("Nao foi possivel carregar os dados do dashboard.");
+        if (active) setError("Não foi possível carregar os dados do dashboard.");
       } finally {
         if (active) setIsLoading(false);
       }
@@ -491,7 +505,7 @@ function DashboardScreen() {
     time: String(reserva.horaInicio || "").slice(0, 5),
     status: statusReserva(reserva.status),
   }));
-  const pendingReservations = reservas.filter((item) => item.status === "pendente");
+  const pendingReservations = reservas.filter((item) => item.status === "aguardando_pagamento");
 
   return (
     <div className="admin-page">
@@ -511,7 +525,7 @@ function DashboardScreen() {
           </div>
         </Panel>
 
-        <Panel title="Reservas pendentes" action={`${pendingReservations.length} pendente`}>
+        <Panel title="Aguardando pagamento" action={`${pendingReservations.length} pendente`}>
           <div className="admin-pending-card">
             <AlertTriangle aria-hidden="true" size={24} />
             <strong>{pendingReservations.length} reserva aguardando confirmação</strong>
@@ -528,7 +542,7 @@ function DashboardScreen() {
         <Panel title="Avisos importantes">
           <div className="admin-alerts">
             <p>
-              <strong>Onda 03 em manutenção:</strong> bloquear manhã até troca
+              <strong>Quadra 03 em manutenção:</strong> bloquear manhã até troca
               de rede ser concluída.
             </p>
             <p>
@@ -593,7 +607,7 @@ function ReservationsScreen() {
     try {
       setReservas(await listarReservas());
     } catch {
-      setError("Nao foi possivel carregar as reservas.");
+      setError("Não foi possível carregar as reservas.");
     } finally {
       setIsLoading(false);
     }
@@ -611,7 +625,7 @@ function ReservationsScreen() {
       setFeedback("Alteracao salva com sucesso.");
       await carregarReservas();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar a reserva.");
+      setError(requestError.message || "Não foi possível atualizar a reserva.");
     }
   };
 
@@ -628,7 +642,7 @@ function ReservationsScreen() {
         />
         {feedback && <p className="admin-success">{feedback}</p>}
         {!isLoading && !error && reservas.length > 0 && (
-          <ResponsiveTable columns={["Cliente", "Quadra", "Modalidade", "Data", "Horario", "Status", "Acoes"]}>
+          <ResponsiveTable columns={["Cliente", "Quadra", "Modalidade", "Data", "Horario", "Status", "Pagamento", "Acoes"]}>
             {reservas.map((reservation) => (
               <tr key={reservation.id}>
                 <td>
@@ -641,6 +655,9 @@ function ReservationsScreen() {
                 <td>{String(reservation.horaInicio || "").slice(0, 5)}</td>
                 <td>
                   <StatusBadge status={statusReserva(reservation.status)} />
+                </td>
+                <td>
+                  <StatusBadge status={statusPagamento(reservation.pagamentoStatus)} />
                 </td>
                 <td>
                   <div className="admin-table-actions">
@@ -679,7 +696,7 @@ function CourtsScreen() {
     try {
       setCourts(await listarQuadras());
     } catch {
-      setError("Nao foi possivel carregar as quadras.");
+      setError("Não foi possível carregar as quadras.");
     } finally {
       setIsLoading(false);
     }
@@ -697,7 +714,7 @@ function CourtsScreen() {
       setFeedback("Status da quadra atualizado.");
       await carregarQuadras();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar a quadra.");
+      setError(requestError.message || "Não foi possível atualizar a quadra.");
     }
   };
 
@@ -732,7 +749,7 @@ function CourtsScreen() {
                   Ativar
                 </AdminButton>
                 <AdminButton variant="ghost" onClick={() => mudarStatus(court.id, "manutencao")}>
-                  Manutencao
+                  Manutenção
                 </AdminButton>
                 <AdminButton onClick={() => mudarStatus(court.id, "inativa")}>
                   Inativar
@@ -758,7 +775,7 @@ function ModalitiesScreen() {
     try {
       setModalidades(await listarModalidades());
     } catch {
-      setError("Nao foi possivel carregar as modalidades.");
+      setError("Não foi possível carregar as modalidades.");
     } finally {
       setIsLoading(false);
     }
@@ -776,7 +793,7 @@ function ModalitiesScreen() {
       setFeedback("Status da modalidade atualizado.");
       await carregarModalidades();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar a modalidade.");
+      setError(requestError.message || "Não foi possível atualizar a modalidade.");
     }
   };
 
@@ -837,7 +854,7 @@ function ScheduleScreen() {
     try {
       setHorarios(await listarHorarios());
     } catch {
-      setError("Nao foi possivel carregar os horarios.");
+      setError("Não foi possível carregar os horários.");
     } finally {
       setIsLoading(false);
     }
@@ -855,7 +872,7 @@ function ScheduleScreen() {
       setFeedback("Horario atualizado com sucesso.");
       await carregarHorarios();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar o horario.");
+      setError(requestError.message || "Não foi possível atualizar o horário.");
     }
   };
 
@@ -868,14 +885,14 @@ function ScheduleScreen() {
 
   return (
     <div className="admin-page">
-      <Toolbar title="Grade de horarios" buttonLabel="Criar horario" />
+      <Toolbar title="Grade de horários" buttonLabel="Criar horário" />
       <Panel title="Mapa operacional por quadra">
         <AdminState
           error={error}
           isLoading={isLoading}
           empty={!horarios.length}
-          loadingText="Carregando horarios..."
-          emptyText="Nenhum horario encontrado."
+          loadingText="Carregando horários..."
+          emptyText="Nenhum horário encontrado."
         />
         {feedback && <p className="admin-success">{feedback}</p>}
         {!isLoading && !error && Object.entries(porQuadra).map(([court, slots]) => (
@@ -917,7 +934,7 @@ function ClientsScreen() {
     try {
       setClientes(await listarClientes());
     } catch {
-      setError("Nao foi possivel carregar os clientes.");
+      setError("Não foi possível carregar os clientes.");
     } finally {
       setIsLoading(false);
     }
@@ -935,7 +952,7 @@ function ClientsScreen() {
       setFeedback("Status do cliente atualizado.");
       await carregarClientes();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar o cliente.");
+      setError(requestError.message || "Não foi possível atualizar o cliente.");
     }
   };
 
@@ -997,7 +1014,7 @@ function AnnouncementsScreen() {
     try {
       setComunicados(await listarComunicados());
     } catch {
-      setError("Nao foi possivel carregar os comunicados.");
+      setError("Não foi possível carregar os comunicados.");
     } finally {
       setIsLoading(false);
     }
@@ -1015,13 +1032,13 @@ function AnnouncementsScreen() {
       setFeedback("Comunicado atualizado com sucesso.");
       await carregarComunicados();
     } catch (requestError) {
-      setError(requestError.message || "Nao foi possivel atualizar o comunicado.");
+      setError(requestError.message || "Não foi possível atualizar o comunicado.");
     }
   };
 
   return (
     <div className="admin-page">
-      <Toolbar title="Comunicados da arena" buttonLabel="Novo comunicado" />
+      <Toolbar title="Comunicados do complexo" buttonLabel="Novo comunicado" />
       <section className="admin-grid admin-grid--two">
         <Panel title="Lista de comunicados">
           <AdminState
@@ -1079,7 +1096,7 @@ function ReportsScreen() {
         ]);
         if (active) setReports({ reservas, ocupacao, modalidades });
       } catch {
-        if (active) setError("Nao foi possivel carregar os relatorios.");
+        if (active) setError("Não foi possível carregar os relatórios.");
       } finally {
         if (active) setIsLoading(false);
       }
@@ -1105,15 +1122,15 @@ function ReportsScreen() {
   const highlights = reports
     ? [
         { label: "Total de reservas", value: reports.reservas.total },
-        { label: "Total horarios", value: reports.ocupacao.totalHorarios },
-        { label: "Horarios reservados", value: reports.ocupacao.horariosReservados },
+        { label: "Total horários", value: reports.ocupacao.totalHorarios },
+        { label: "Horários reservados", value: reports.ocupacao.horariosReservados },
         { label: "Ocupacao media", value: `${reports.ocupacao.taxaOcupacao}%` },
       ]
     : [];
 
   return (
     <div className="admin-page">
-      <Toolbar title="Relatorios da API" buttonLabel="Exportar visual" />
+      <Toolbar title="Relatórios da API" buttonLabel="Exportar visual" />
       <AdminState
         error={error}
         isLoading={isLoading}

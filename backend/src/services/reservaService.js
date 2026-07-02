@@ -32,7 +32,7 @@ export async function verificarHorarioDisponivel({ quadra, horario, transaction 
       quadraId: quadra.id,
       data: horario.data,
       horaInicio: horario.horaInicio,
-      status: { [Op.ne]: "cancelada" },
+      status: { [Op.notIn]: ["cancelada", "expirada"] },
     },
     transaction,
     lock: transaction.LOCK.UPDATE,
@@ -89,6 +89,9 @@ export async function criarReserva({
         data: horario.data,
         horaInicio: horario.horaInicio,
         horaFim: horario.horaFim,
+        status: "aguardando_pagamento",
+        valorTotal: Number(quadra.valorHora || 0),
+        pagamentoStatus: "pendente",
         observacoes: typeof observacoes === "string" ? observacoes.trim() || null : null,
       }, { transaction });
 
@@ -130,8 +133,12 @@ export async function alterarStatusDaReserva({
     }
 
     const statusAnterior = reserva.status;
-    await reserva.update({ status: novoStatus }, { transaction });
-    if (novoStatus === "cancelada") {
+    const atualizacao = { status: novoStatus };
+    if (novoStatus === "cancelada" && reserva.pagamentoStatus !== "aprovado") {
+      atualizacao.pagamentoStatus = "cancelado";
+    }
+    await reserva.update(atualizacao, { transaction });
+    if (novoStatus === "cancelada" || novoStatus === "expirada") {
       await Horario.update(
         { status: "disponivel" },
         { where: { id: reserva.horarioId }, transaction },
