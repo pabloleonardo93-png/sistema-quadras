@@ -168,6 +168,25 @@ function statusHorario(status) {
   return labels[status] || status || "--";
 }
 
+function statusHorarioClasse(status) {
+  const classes = {
+    disponivel: "livre",
+    reservado: "reservado",
+    bloqueado: "bloqueado",
+  };
+  return classes[status] || "livre";
+}
+
+function formatarDataAdmin(data) {
+  const [ano, mes, dia] = String(data || "").slice(0, 10).split("-");
+  if (!ano || !mes || !dia) return data || "--";
+  return `${dia}/${mes}/${ano}`;
+}
+
+function formatarHoraAdmin(hora) {
+  return String(hora || "").slice(0, 5) || "--";
+}
+
 function statusComunicado(status) {
   const labels = {
     rascunho: "Rascunho",
@@ -844,6 +863,14 @@ function ModalitiesScreen() {
 
 function ScheduleScreen() {
   const [horarios, setHorarios] = useState([]);
+  const [quadras, setQuadras] = useState([]);
+  const [modalidades, setModalidades] = useState([]);
+  const [filtros, setFiltros] = useState({
+    quadraId: "",
+    modalidadeId: "",
+    data: "",
+    status: "",
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState("");
@@ -852,7 +879,14 @@ function ScheduleScreen() {
     setIsLoading(true);
     setError("");
     try {
-      setHorarios(await listarHorarios());
+      const [horariosCarregados, quadrasCarregadas, modalidadesCarregadas] = await Promise.all([
+        listarHorarios(),
+        listarQuadras(),
+        listarModalidades(),
+      ]);
+      setHorarios(horariosCarregados);
+      setQuadras(quadrasCarregadas);
+      setModalidades(modalidadesCarregadas);
     } catch {
       setError("Não foi possível carregar os horários.");
     } finally {
@@ -869,24 +903,97 @@ function ScheduleScreen() {
     setError("");
     try {
       await acao(id);
-      setFeedback("Horario atualizado com sucesso.");
+      setFeedback("Horário atualizado com sucesso.");
       await carregarHorarios();
     } catch (requestError) {
       setError(requestError.message || "Não foi possível atualizar o horário.");
     }
   };
 
-  const porQuadra = horarios.reduce((acc, horario) => {
-    const nome = horario.quadra?.nome || "Sem quadra";
-    acc[nome] = acc[nome] || [];
-    acc[nome].push(horario);
-    return acc;
-  }, {});
+  const quadrasPorId = useMemo(
+    () => new Map(quadras.map((quadra) => [String(quadra.id), quadra])),
+    [quadras],
+  );
+
+  const datasDisponiveis = useMemo(
+    () => [...new Set(horarios.map((horario) => String(horario.data || "").slice(0, 10)).filter(Boolean))].sort(),
+    [horarios],
+  );
+
+  const horariosFiltrados = useMemo(() => {
+    const compararHorario = (a, b) =>
+      `${a.data || ""}${a.quadra?.nome || ""}${a.horaInicio || ""}`.localeCompare(
+        `${b.data || ""}${b.quadra?.nome || ""}${b.horaInicio || ""}`,
+      );
+
+    return horarios
+      .filter((horario) => {
+        const quadraId = String(horario.quadraId || horario.quadra?.id || "");
+        const quadra = quadrasPorId.get(quadraId) || horario.quadra;
+        const data = String(horario.data || "").slice(0, 10);
+
+        if (filtros.quadraId && quadraId !== filtros.quadraId) return false;
+        if (filtros.data && data !== filtros.data) return false;
+        if (filtros.status && horario.status !== filtros.status) return false;
+        if (filtros.modalidadeId) {
+          const modalidadesDaQuadra = quadra?.modalidades || [];
+          return modalidadesDaQuadra.some((modalidade) => String(modalidade.id) === filtros.modalidadeId);
+        }
+        return true;
+      })
+      .sort(compararHorario);
+  }, [filtros, horarios, quadrasPorId]);
+
+  const resumoHorarios = useMemo(
+    () => horariosFiltrados.reduce(
+      (acc, horario) => {
+        acc.total += 1;
+        acc[horario.status] = (acc[horario.status] || 0) + 1;
+        return acc;
+      },
+      { total: 0, disponivel: 0, reservado: 0, bloqueado: 0 },
+    ),
+    [horariosFiltrados],
+  );
+
+  const gruposAgenda = useMemo(() => {
+    const grupos = new Map();
+    horariosFiltrados.forEach((horario) => {
+      const quadraId = String(horario.quadraId || horario.quadra?.id || "");
+      const quadra = quadrasPorId.get(quadraId) || horario.quadra;
+      const data = String(horario.data || "").slice(0, 10);
+      const chave = `${quadraId || "sem-quadra"}-${data || "sem-data"}`;
+
+      if (!grupos.has(chave)) {
+        grupos.set(chave, {
+          key: chave,
+          court: quadra?.nome || "Sem quadra",
+          data,
+          modalidades: quadra?.modalidades || [],
+          slots: [],
+        });
+      }
+      grupos.get(chave).slots.push(horario);
+    });
+
+    return [...grupos.values()].map((grupo) => ({
+      ...grupo,
+      slots: grupo.slots.sort((a, b) => String(a.horaInicio || "").localeCompare(String(b.horaInicio || ""))),
+    }));
+  }, [horariosFiltrados, quadrasPorId]);
+
+  const atualizarFiltro = (campo, valor) => {
+    setFiltros((current) => ({ ...current, [campo]: valor }));
+  };
+
+  const limparFiltros = () => {
+    setFiltros({ quadraId: "", modalidadeId: "", data: "", status: "" });
+  };
 
   return (
     <div className="admin-page">
-      <Toolbar title="Grade de horários" buttonLabel="Criar horário" />
-      <Panel title="Mapa operacional por quadra">
+      <Toolbar title="Grade de horários" buttonLabel="Criar horário" showFilter={false} showSearch={false} />
+      <Panel title="Agenda administrativa por quadra">
         <AdminState
           error={error}
           isLoading={isLoading}
@@ -895,28 +1002,131 @@ function ScheduleScreen() {
           emptyText="Nenhum horário encontrado."
         />
         {feedback && <p className="admin-success">{feedback}</p>}
-        {!isLoading && !error && Object.entries(porQuadra).map(([court, slots]) => (
-          <div className="admin-schedule__row" key={court}>
-            <strong>{court}</strong>
-            <div>
-              {slots.map((slot) => (
-                <button
-                  className={`admin-slot admin-slot--${statusHorario(slot.status).toLowerCase()}`}
-                  key={slot.id}
-                  type="button"
-                  onClick={() =>
-                    slot.status === "bloqueado"
-                      ? executarAcao(liberarHorario, slot.id)
-                      : executarAcao(bloquearHorario, slot.id)
-                  }
+        {!isLoading && !error && horarios.length > 0 && (
+          <div className="admin-schedule">
+            <div className="admin-schedule__filters" aria-label="Filtros da agenda">
+              <label>
+                Quadra
+                <select value={filtros.quadraId} onChange={(event) => atualizarFiltro("quadraId", event.target.value)}>
+                  <option value="">Todas as quadras</option>
+                  {quadras.map((quadra) => (
+                    <option key={quadra.id} value={quadra.id}>
+                      {quadra.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Modalidade
+                <select
+                  value={filtros.modalidadeId}
+                  onChange={(event) => atualizarFiltro("modalidadeId", event.target.value)}
                 >
-                  <span>{String(slot.horaInicio || "").slice(0, 5)}</span>
-                  <small>{statusHorario(slot.status)}</small>
-                </button>
-              ))}
+                  <option value="">Todas as modalidades</option>
+                  {modalidades.map((modalidade) => (
+                    <option key={modalidade.id} value={modalidade.id}>
+                      {modalidade.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Data
+                <select value={filtros.data} onChange={(event) => atualizarFiltro("data", event.target.value)}>
+                  <option value="">Todas as datas</option>
+                  {datasDisponiveis.map((data) => (
+                    <option key={data} value={data}>
+                      {formatarDataAdmin(data)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Status
+                <select value={filtros.status} onChange={(event) => atualizarFiltro("status", event.target.value)}>
+                  <option value="">Todos os status</option>
+                  <option value="disponivel">Livre</option>
+                  <option value="reservado">Reservado</option>
+                  <option value="bloqueado">Bloqueado</option>
+                </select>
+              </label>
+              <button className="admin-button admin-button--ghost" type="button" onClick={limparFiltros}>
+                Limpar filtros
+              </button>
             </div>
+
+            <div className="admin-schedule__summary" aria-label="Resumo dos horários filtrados">
+              <span>
+                <small>Total de horários</small>
+                <strong>{resumoHorarios.total}</strong>
+              </span>
+              <span className="admin-schedule__summary-item--livre">
+                <small>Livres</small>
+                <strong>{resumoHorarios.disponivel}</strong>
+              </span>
+              <span className="admin-schedule__summary-item--reservado">
+                <small>Reservados</small>
+                <strong>{resumoHorarios.reservado}</strong>
+              </span>
+              <span className="admin-schedule__summary-item--bloqueado">
+                <small>Bloqueados</small>
+                <strong>{resumoHorarios.bloqueado}</strong>
+              </span>
+            </div>
+
+            <div className="admin-schedule__legend" aria-label="Legenda de status">
+              <span><i className="is-free" /> Livre</span>
+              <span><i className="is-booked" /> Reservado</span>
+              <span><i className="is-blocked" /> Bloqueado</span>
+            </div>
+
+            {horariosFiltrados.length === 0 ? (
+              <p className="admin-muted">Nenhum horário encontrado para os filtros selecionados.</p>
+            ) : (
+              <div className="admin-schedule__board">
+                {gruposAgenda.map((grupo) => (
+                  <article className="admin-schedule__group" key={grupo.key}>
+                    <header>
+                      <div>
+                        <span>Quadra</span>
+                        <strong>{grupo.court}</strong>
+                      </div>
+                      <div>
+                        <span>Data</span>
+                        <strong>{formatarDataAdmin(grupo.data)}</strong>
+                      </div>
+                      {grupo.modalidades.length > 0 && (
+                        <small>{grupo.modalidades.map((modalidade) => modalidade.nome).join(" / ")}</small>
+                      )}
+                    </header>
+                    <div className="admin-schedule__grid">
+                      {grupo.slots.map((slot) => {
+                        const podeAlternar = slot.status !== "reservado";
+                        return (
+                          <button
+                            className={`admin-slot admin-slot--${statusHorarioClasse(slot.status)}`}
+                            disabled={!podeAlternar}
+                            key={slot.id}
+                            title={podeAlternar ? "Clique para bloquear ou liberar" : "Horário reservado"}
+                            type="button"
+                            onClick={() =>
+                              slot.status === "bloqueado"
+                                ? executarAcao(liberarHorario, slot.id)
+                                : executarAcao(bloquearHorario, slot.id)
+                            }
+                          >
+                            <span>{formatarHoraAdmin(slot.horaInicio)}</span>
+                            <small>{statusHorario(slot.status)}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
-        ))}
+        )}
       </Panel>
     </div>
   );
@@ -1179,7 +1389,7 @@ function Panel({ action, children, title }) {
   );
 }
 
-function Toolbar({ buttonLabel, title }) {
+function Toolbar({ buttonLabel, showFilter = true, showSearch = true, title }) {
   return (
     <div className="admin-toolbar">
       <div>
@@ -1187,15 +1397,19 @@ function Toolbar({ buttonLabel, title }) {
         <p>Dados carregados da API quando o backend estiver disponivel.</p>
       </div>
       <div>
-        <SearchInput placeholder="Pesquisar" />
-        <button className="admin-filter" type="button">
-          <Filter aria-hidden="true" size={17} />
-          Filtros
-        </button>
-        <AdminButton>
-          <Plus aria-hidden="true" size={17} />
-          {buttonLabel}
-        </AdminButton>
+        {showSearch && <SearchInput placeholder="Pesquisar" />}
+        {showFilter && (
+          <button className="admin-filter" type="button">
+            <Filter aria-hidden="true" size={17} />
+            Filtros
+          </button>
+        )}
+        {buttonLabel && (
+          <AdminButton>
+            <Plus aria-hidden="true" size={17} />
+            {buttonLabel}
+          </AdminButton>
+        )}
       </div>
     </div>
   );

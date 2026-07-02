@@ -3985,56 +3985,222 @@ img {
   width: auto;
 }
 
-.admin-schedule__row {
+.admin-schedule {
   display: grid;
-  gap: 12px;
-  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 18px;
 }
 
-.admin-schedule__row > strong {
-  align-self: center;
+.admin-schedule__filters {
+  display: grid;
+  align-items: end;
+  grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
+  gap: 12px;
+}
+
+.admin-schedule__filters label {
+  display: grid;
+  gap: 7px;
+  color: var(--admin-muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-schedule__filters select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  padding: 0 12px;
+  outline: 0;
+  background: #fff;
+  color: var(--admin-ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-schedule__filters select:focus-visible {
+  border-color: rgba(11, 93, 75, 0.45);
+  box-shadow: 0 0 0 4px rgba(11, 93, 75, 0.12);
+}
+
+.admin-schedule__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-schedule__summary span {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--admin-line);
+  border-radius: 16px;
+  padding: 13px 14px;
+  background: #fff;
+}
+
+.admin-schedule__summary small {
+  color: var(--admin-muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-schedule__summary strong {
+  color: var(--admin-green-dark);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.admin-schedule__summary-item--livre {
+  background: #edf8f1 !important;
+}
+
+.admin-schedule__summary-item--reservado {
+  background: #eef7ff !important;
+}
+
+.admin-schedule__summary-item--bloqueado {
+  background: #fff1ed !important;
+}
+
+.admin-schedule__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-schedule__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-schedule__legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.admin-schedule__legend .is-free { background: #2fa866; }
+.admin-schedule__legend .is-booked { background: #3f93c7; }
+.admin-schedule__legend .is-blocked { background: #d85d43; }
+
+.admin-schedule__board {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-schedule__group {
+  border: 1px solid var(--admin-line);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-schedule__group header {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(140px, 0.5fr) minmax(130px, 0.35fr) minmax(180px, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-schedule__group header div {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-schedule__group header span,
+.admin-schedule__group header small {
+  color: var(--admin-muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-schedule__group header strong {
   color: var(--admin-green);
   font-family: var(--font-display);
   font-size: 1.45rem;
+  line-height: 1.05;
 }
 
-.admin-schedule__row > div {
+.admin-schedule__group header small {
+  align-self: center;
+  justify-self: end;
+  text-align: right;
+}
+
+.admin-schedule__grid {
   display: grid;
-  grid-template-columns: repeat(11, minmax(78px, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 10px;
 }
 
 .admin-slot {
   display: grid;
-  min-height: 62px;
-  place-items: center;
+  min-height: 72px;
+  justify-items: start;
+  align-content: center;
+  gap: 4px;
   border: 1px solid var(--admin-line);
   border-radius: 14px;
+  padding: 12px 14px;
   background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.admin-slot:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(22, 33, 31, 0.08);
+}
+
+.admin-slot:focus-visible {
+  outline: 3px solid rgba(243, 200, 75, 0.55);
+  outline-offset: 2px;
+}
+
+.admin-slot:disabled {
+  cursor: not-allowed;
+  opacity: 0.88;
 }
 
 .admin-slot span {
+  font-size: 0.9rem;
   font-weight: 900;
 }
 
 .admin-slot small {
-  font-size: 0.58rem;
-  font-weight: 800;
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .admin-slot--livre {
-  border-color: rgba(20, 115, 76, 0.25);
+  border-color: rgba(20, 115, 76, 0.24);
+  background: #edf8f1;
   color: #14734c;
 }
 
 .admin-slot--reservado {
-  border-color: rgba(40, 92, 123, 0.25);
+  border-color: rgba(40, 92, 123, 0.24);
   background: #eef7ff;
   color: #285c7b;
 }
 
 .admin-slot--bloqueado {
-  border-color: rgba(169, 61, 40, 0.25);
+  border-color: rgba(169, 61, 40, 0.24);
   background: #fff1ed;
   color: #a93d28;
 }
@@ -4424,6 +4590,15 @@ img {
   .admin-files-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .admin-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-schedule__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-schedule__filters .admin-button { width: 100%; }
+  .admin-schedule__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-schedule__group header { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-schedule__group header small {
+    grid-column: 1 / -1;
+    justify-self: start;
+    text-align: left;
+  }
 }
 
 @media (max-width: 940px) {
@@ -4496,8 +4671,11 @@ img {
   .admin-button { width: 100%; }
   .admin-reservation-summary { align-items: start; grid-template-columns: 1fr; }
   .admin-quick-actions { grid-template-columns: 1fr; }
-  .admin-schedule__row { grid-template-columns: 1fr; }
-  .admin-schedule__row > div { overflow-x: auto; padding-bottom: 8px; }
+  .admin-schedule__filters,
+  .admin-schedule__summary,
+  .admin-schedule__group header { grid-template-columns: 1fr; }
+  .admin-schedule__group { padding: 14px; }
+  .admin-schedule__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-login h1 { font-size: clamp(3.6rem, 18vw, 5rem); }
   .admin-login__card { padding: 22px; }
 }
