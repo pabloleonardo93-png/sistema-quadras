@@ -20,21 +20,18 @@ const modalidadesIniciais = [
 const quadrasIniciais = [
   {
     nome: "Areia 01",
-    nomeAntigo: "Onda 01",
     descricao: "Quadra central",
     valor_hora: 90,
     imagem_url: "/images/quadras/areia-01.jpeg",
   },
   {
     nome: "Areia 02",
-    nomeAntigo: "Onda 02",
     descricao: "Quadra panoramica",
     valor_hora: 85,
     imagem_url: "/images/quadras/areia-02.jpeg",
   },
   {
     nome: "Areia 03",
-    nomeAntigo: "Onda 03",
     descricao: "Quadra de treino",
     valor_hora: 75,
     imagem_url: "/images/quadras/areia-03.webp",
@@ -128,32 +125,10 @@ async function criarModalidades(queryInterface, agora) {
 
 async function criarQuadras(queryInterface, agora) {
   for (const quadra of quadrasIniciais) {
-    const { nomeAntigo, ...dadosQuadra } = quadra;
-    const nomes = [quadra.nome, nomeAntigo].filter(Boolean);
-    const registros = await queryInterface.sequelize.query(
-      "SELECT id, nome FROM quadras WHERE nome IN (:nomes)",
-      { replacements: { nomes }, type: QueryTypes.SELECT },
-    );
-    const quadraAtual = registros.find((registro) => registro.nome === quadra.nome);
-    const quadraAntiga = registros.find((registro) => registro.nome === nomeAntigo);
-
-    if (!quadraAtual && quadraAntiga) {
-      await queryInterface.bulkUpdate("quadras", {
-        nome: quadra.nome,
-        atualizado_em: agora,
-      }, { id: quadraAntiga.id });
-    }
-
-    if (quadraAtual && quadraAntiga) {
-      await queryInterface.bulkUpdate("quadras", {
-        status: "inativa",
-        atualizado_em: agora,
-      }, { id: quadraAntiga.id });
-    }
-
-    if (!quadraAtual && !quadraAntiga) {
+    const existe = await existePorCampo(queryInterface, "quadras", "nome", quadra.nome);
+    if (!existe) {
       await queryInterface.bulkInsert("quadras", [{
-        ...dadosQuadra,
+        ...quadra,
         status: "ativa",
         criado_em: agora,
         atualizado_em: agora,

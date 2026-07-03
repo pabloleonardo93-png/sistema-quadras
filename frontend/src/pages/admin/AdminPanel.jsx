@@ -752,7 +752,7 @@ function CourtsScreen() {
         <section className="admin-court-grid">
           {courts.map((court) => (
             <article className="admin-court-card" key={court.id}>
-              <img src={court.imagemUrl || courtImages.onda1} alt={`Foto da ${court.nome}`} />
+              <img src={court.imagemUrl || courtImages.areia1} alt={`Foto da ${court.nome}`} />
               <div>
                 <span>C-{String(court.id).padStart(2, "0")}</span>
                 <StatusBadge status={statusQuadra(court.status)} />

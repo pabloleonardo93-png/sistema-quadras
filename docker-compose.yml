@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: arena-onda-postgres
+    container_name: pe-na-areia-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Configure POSTGRES_DB no arquivo .env}
@@ -21,7 +21,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: arena-onda-backend
+    container_name: pe-na-areia-backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -58,10 +58,10 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: nginx/Dockerfile
+      dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: arena-onda-nginx
+    container_name: pe-na-areia-nginx
     restart: unless-stopped
     depends_on:
       - backend

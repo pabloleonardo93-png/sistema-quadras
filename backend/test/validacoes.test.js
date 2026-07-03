@@ -33,7 +33,7 @@ test("normaliza horários", () => {
 });
 
 test("valida textos e valores", () => {
-  assert.equal(validarTexto("  Arena Onda  ", "Nome"), "Arena Onda");
+  assert.equal(validarTexto("  Pe na Areia  ", "Nome"), "Pe na Areia");
   assert.equal(validarValorPositivo("75.50"), 75.5);
   assert.throws(() => validarValorPositivo(-1), /inválido/);
 });

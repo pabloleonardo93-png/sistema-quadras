@@ -1,6 +1,6 @@
 # Backend do Sistema de Quadras
 
-API REST da Arena Onda em JavaScript com Node.js, Express, Sequelize, PostgreSQL e Docker. O código segue uma organização simples no estilo Agenda: controllers recebem requisições, models representam tabelas, routes definem URLs, middlewares cuidam da segurança e services concentram apenas regras importantes.
+API REST do Pé na Areia em JavaScript com Node.js, Express, Sequelize, PostgreSQL e Docker. O código segue uma organização simples no estilo Agenda: controllers recebem requisições, models representam tabelas, routes definem URLs, middlewares cuidam da segurança e services concentram apenas regras importantes.
 
 ## Tecnologias
 
@@ -173,7 +173,7 @@ A senha nunca é retornada pela API.
 
 ~~~json
 {
-  "nome": "Quadra Onda 01",
+  "nome": "Areia 01",
   "descricao": "Quadra principal",
   "valorHora": 80,
   "imagemUrl": null,
