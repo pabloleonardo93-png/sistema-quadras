@@ -49,7 +49,11 @@ function ReservationPageState({ children, isError = false }) {
   return (
     <section className="booking section reservation-page__state-section">
       <div className="page-shell">
-        <div className={`reservation-page__state ${isError ? "reservation-page__state--error" : ""}`}>
+        <div
+          className={`reservation-page__state ${isError ? "reservation-page__state--error" : ""}`}
+          role={isError ? "alert" : "status"}
+          aria-live={isError ? "assertive" : "polite"}
+        >
           {children}
         </div>
       </div>

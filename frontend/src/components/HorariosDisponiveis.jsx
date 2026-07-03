@@ -11,9 +11,17 @@ export function HorariosDisponiveis({
         <span>Horários disponíveis</span>
         <small>1 hora por reserva</small>
       </div>
-      <div className="time-grid">
-        {isLoading && <p className="section-state">Carregando horários...</p>}
-        {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+      <div className="time-grid" role="group" aria-label="Horários disponíveis">
+        {isLoading && (
+          <p className="section-state" role="status" aria-live="polite">
+            Carregando horários...
+          </p>
+        )}
+        {!isLoading && error && (
+          <p className="section-state section-state--error" role="alert">
+            {error}
+          </p>
+        )}
         {!isLoading && !error && times.length === 0 && (
           <p className="section-state">Nenhum horário disponível para esta escolha.</p>
         )}

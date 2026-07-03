@@ -17,8 +17,16 @@ export function ComunicadosSection({
           description="Promoções, manutenções e avisos publicados pela equipe."
         />
 
-        {isLoading && <p className="section-state">Carregando comunicados...</p>}
-        {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+        {isLoading && (
+          <p className="section-state" role="status" aria-live="polite">
+            Carregando comunicados...
+          </p>
+        )}
+        {!isLoading && error && (
+          <p className="section-state section-state--error" role="alert">
+            {error}
+          </p>
+        )}
         {!isLoading && !error && (
           <div className="announcements__grid">
             {comunicados.map((comunicado) => (

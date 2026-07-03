@@ -25,8 +25,16 @@ export function QuadrasSection({ courts = [], error = "", isLoading = false }) {
         </div>
 
         <div className="courts__grid">
-          {isLoading && <p className="section-state">Carregando quadras...</p>}
-          {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+          {isLoading && (
+            <p className="section-state" role="status" aria-live="polite">
+              Carregando quadras...
+            </p>
+          )}
+          {!isLoading && error && (
+            <p className="section-state section-state--error" role="alert">
+              {error}
+            </p>
+          )}
           {!isLoading && !error && courts.length === 0 && (
             <p className="section-state">Nenhuma quadra encontrada.</p>
           )}

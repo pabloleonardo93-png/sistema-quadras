@@ -18,8 +18,16 @@ export function ModalidadesSection({
         />
 
         <div className="modalities__grid">
-          {isLoading && <p className="section-state">Carregando modalidades...</p>}
-          {!isLoading && error && <p className="section-state section-state--error">{error}</p>}
+          {isLoading && (
+            <p className="section-state" role="status" aria-live="polite">
+              Carregando modalidades...
+            </p>
+          )}
+          {!isLoading && error && (
+            <p className="section-state section-state--error" role="alert">
+              {error}
+            </p>
+          )}
           {!isLoading && !error && modalities.length === 0 && (
             <p className="section-state">Nenhuma modalidade encontrada.</p>
           )}

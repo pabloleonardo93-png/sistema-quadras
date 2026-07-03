@@ -6,7 +6,7 @@ import { BrandMark } from "./BrandMark";
 const links = [
   { label: "Modalidades", href: "#modalidades" },
   { label: "Quadras", href: "#quadras" },
-  { label: "Reservas", href: "#quadras" },
+  { label: "Reservas", href: "#reservas" },
   { label: "O espaço", href: "#sobre" },
   { label: "Eventos", href: "#eventos" },
   { label: "Contato", href: "#contato" },
@@ -47,7 +47,7 @@ export function Header() {
         ))}
         <a
           className="button button--primary site-nav__mobile-cta"
-          href="#quadras"
+          href="#reservas"
           onClick={closeMenu}
         >
           <span>Reservar agora</span>
@@ -56,7 +56,7 @@ export function Header() {
 
       <a
         className="button button--primary site-header__cta"
-        href="#quadras"
+        href="#reservas"
       >
         <CalendarDays aria-hidden="true" size={18} />
         <span>Reservar quadra</span>

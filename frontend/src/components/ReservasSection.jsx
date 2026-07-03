@@ -30,11 +30,11 @@ export function ReservasSection({ courts = [] }) {
           <SectionHeading
             eyebrow="Reservas"
             title="RESERVE E PAGUE COM VALOR CERTO."
-            description="Escolha quadra, data e horário. O sistema calcula o valor e abre o checkout seguro do Mercado Pago para Pix, cartão ou boleto."
+            description="Escolha quadra, data e horário. O sistema calcula o valor e abre o checkout seguro do Mercado Pago."
             inverse
           />
           <div className="reservations-flow__note">
-            <strong>Como funciona</strong>
+            <strong>Status da reserva</strong>
             <p>
               Cada reserva gera um pagamento próprio. O horário fica pendente
               até o retorno do Mercado Pago confirmar a transação.
@@ -46,8 +46,6 @@ export function ReservasSection({ courts = [] }) {
           <a
             className="reservation-action reservation-action--primary"
             href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <ClipboardList aria-hidden="true" size={24} />
             <span>
@@ -57,19 +55,13 @@ export function ReservasSection({ courts = [] }) {
             <ArrowUpRight aria-hidden="true" size={18} />
           </a>
 
-          <a
-            className="reservation-action"
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <div className="reservation-action reservation-action--info">
             <CreditCard aria-hidden="true" size={24} />
             <span>
-              <strong>Pix, cartão ou boleto</strong>
-              <small>Pagamento com valor calculado</small>
+              <strong>Checkout seguro</strong>
+              <small>Pix, cartão ou boleto quando disponíveis</small>
             </span>
-            <ArrowUpRight aria-hidden="true" size={18} />
-          </a>
+          </div>
 
           <a
             className="reservation-action"
@@ -85,19 +77,13 @@ export function ReservasSection({ courts = [] }) {
             <ArrowUpRight aria-hidden="true" size={18} />
           </a>
 
-          <a
-            className="reservation-action"
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <div className="reservation-action reservation-action--info">
             <Banknote aria-hidden="true" size={24} />
             <span>
-              <strong>Ver planos e valores</strong>
+              <strong>Valor transparente</strong>
               <small>{priceLabel}</small>
             </span>
-            <ArrowUpRight aria-hidden="true" size={18} />
-          </a>
+          </div>
         </div>
       </div>
     </section>

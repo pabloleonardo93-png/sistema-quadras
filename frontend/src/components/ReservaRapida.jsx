@@ -100,6 +100,14 @@ export function ReservaRapida({
     ? new Intl.DateTimeFormat("pt-BR").format(new Date(`${date}T12:00:00`))
     : "--";
   const showCustomerDataStep = isCustomerDataRoute || mostrarDados;
+  const customerStepNumber = isCustomerDataRoute
+    ? isPaymentStepOpen
+      ? "02"
+      : "01"
+    : "03";
+  const bookingHeadingDescription = isCustomerDataRoute
+    ? "Revise a escolha, preencha seus dados e finalize no checkout seguro."
+    : "Escolha a quadra, veja os horários disponíveis e avance para o pagamento.";
 
   useEffect(() => {
     let active = true;
@@ -318,6 +326,7 @@ export function ReservaRapida({
         <SectionHeading
           eyebrow="Reserva rápida"
           title="SEU HORÁRIO EM POUCOS TOQUES."
+          description={bookingHeadingDescription}
           inverse
         />
 
@@ -499,12 +508,12 @@ export function ReservaRapida({
                 {showCustomerDataStep && (
                   <div className="form-section" id="dados-reserva">
                   <div className="form-section__title">
-                    <span>03</span>
+                    <span>{customerStepNumber}</span>
                     <div>
                       <strong>{isPaymentStepOpen ? "Pagamento" : "Seus dados"}</strong>
                       <small>
                         {isPaymentStepOpen
-                          ? "Escolha Pix ou cartao no Mercado Pago"
+                          ? "Checkout seguro do Mercado Pago"
                           : "Para identificar a reserva"}
                       </small>
                     </div>
@@ -522,7 +531,7 @@ export function ReservaRapida({
                         <div>
                           <strong>Forma de pagamento</strong>
                           <small>
-                            A escolha abre o checkout seguro do Mercado Pago.
+                            Você escolhe a forma disponível dentro do checkout.
                           </small>
                         </div>
                       </div>
@@ -533,11 +542,12 @@ export function ReservaRapida({
                           }`}
                           type="button"
                           onClick={() => setPaymentMethod("pix")}
+                          aria-pressed={paymentMethod === "pix"}
                         >
                           <QrCode aria-hidden="true" size={18} />
                           <span>
-                            <strong>Pagar com Pix</strong>
-                            <small>Selecionar Pix no checkout</small>
+                            <strong>Pix no checkout</strong>
+                            <small>Disponível se liberado no Mercado Pago</small>
                           </span>
                         </button>
                         <button
@@ -546,11 +556,12 @@ export function ReservaRapida({
                           }`}
                           type="button"
                           onClick={() => setPaymentMethod("card")}
+                          aria-pressed={paymentMethod === "card"}
                         >
                           <CreditCard aria-hidden="true" size={18} />
                           <span>
-                            <strong>Pagar com cartao</strong>
-                            <small>Credito ou debito no checkout</small>
+                            <strong>Cartão no checkout</strong>
+                            <small>Crédito ou débito quando disponível</small>
                           </span>
                         </button>
                       </div>
@@ -620,7 +631,11 @@ export function ReservaRapida({
                   </div>
                 )}
 
-                {error && <p className="form-error">{error}</p>}
+                {error && (
+                  <p className="form-error" role="alert">
+                    {error}
+                  </p>
+                )}
 
                 {showCustomerDataStep && (
                   <div className="form-submit">
@@ -643,9 +658,7 @@ export function ReservaRapida({
                     {isSubmitting
                       ? "Abrindo checkout..."
                       : isPaymentStepOpen
-                        ? paymentMethod === "pix"
-                          ? "Ir para Pix no checkout"
-                          : "Ir para cartao no checkout"
+                        ? "Abrir checkout seguro"
                         : "Continuar para pagamento"}
                   </Button>
                   </div>

@@ -14,8 +14,8 @@ const steps = [
   },
   {
     icon: CheckCircle2,
-    title: "Envie a reserva",
-    description: "Informe seus dados e aguarde a confirmação da equipe.",
+    title: "Finalize no checkout",
+    description: "Informe seus dados e conclua o pagamento seguro para confirmar.",
   },
 ];
 

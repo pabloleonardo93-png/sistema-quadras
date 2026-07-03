@@ -10,27 +10,22 @@ export function CardQuadra({ court }) {
   const StatusIcon = statusIcons[court.status];
   const isDisabled = court.status === "maintenance";
   const bookingUrl = `/reserva?quadra=${encodeURIComponent(court.id)}`;
-  const openBooking = () => {
-    if (!isDisabled) {
-      window.open(bookingUrl, "_blank", "noopener,noreferrer");
-    }
-  };
-
-  const handleKeyDown = (event) => {
-    if (!isDisabled && (event.key === "Enter" || event.key === " ")) {
-      event.preventDefault();
-      openBooking();
-    }
-  };
 
   return (
     <article
-      className="court-card"
-      onClick={openBooking}
-      onKeyDown={handleKeyDown}
-      role={isDisabled ? undefined : "link"}
-      tabIndex={isDisabled ? undefined : 0}
+      className={`court-card${isDisabled ? " court-card--disabled" : ""}`}
+      aria-label={`${court.name}. ${court.statusLabel}. ${court.detail}`}
     >
+      {!isDisabled && (
+        <a
+          className="court-card__overlay-link"
+          href={bookingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      )}
       <div className="court-card__image">
         <img src={court.image} alt={`Vista da ${court.name}`} />
         <span className={`status status--${court.status}`}>
@@ -58,7 +53,6 @@ export function CardQuadra({ court }) {
             href={bookingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(event) => event.stopPropagation()}
           >
             Reservar esta quadra
             <ArrowRight aria-hidden="true" size={18} />
