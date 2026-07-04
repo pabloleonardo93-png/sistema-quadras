@@ -7,6 +7,15 @@ import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
 import { hojeLocal, validarData, validarHora, validarId, validarStatus } from "../utils/validacoes.js";
 
+const HORA_ABERTURA = "08:00";
+const HORA_FECHAMENTO = "22:00";
+
+function funcionaNaData(data) {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
+  return diaSemana !== 1;
+}
+
 export const criar = executarAssincrono(async (req, res) => {
   const quadraId = validarId(req.body.quadraId, "Quadra");
   const quadra = await Quadra.findByPk(quadraId);
@@ -15,9 +24,13 @@ export const criar = executarAssincrono(async (req, res) => {
   }
   const data = validarData(req.body.data);
   if (data < hojeLocal()) throw new ErroDaAplicacao("Não é possível criar um horário em uma data passada.");
+  if (!funcionaNaData(data)) throw new ErroDaAplicacao("O funcionamento é de terça a domingo.", 409);
   const horaInicio = validarHora(req.body.horaInicio, "Hora inicial");
   const horaFim = validarHora(req.body.horaFim, "Hora final");
   if (horaFim <= horaInicio) throw new ErroDaAplicacao("A hora final deve ser posterior à hora inicial.");
+  if (horaInicio < HORA_ABERTURA || horaInicio >= HORA_FECHAMENTO || horaFim > HORA_FECHAMENTO) {
+    throw new ErroDaAplicacao("O funcionamento é de 08:00 às 22:00.", 409);
+  }
 
   const existente = await Horario.findOne({ where: { quadraId, data, horaInicio } });
   if (existente) throw new ErroDaAplicacao("Já existe um horário para essa quadra nessa data e hora.", 409);
@@ -51,7 +64,7 @@ export const listar = executarAssincrono(async (req, res) => {
 export const listarDisponiveis = executarAssincrono(async (req, res) => {
   const where = {
     status: "disponivel",
-    horaInicio: { [Op.gte]: "08:00", [Op.lt]: "23:00" },
+    horaInicio: { [Op.gte]: HORA_ABERTURA, [Op.lt]: HORA_FECHAMENTO },
   };
   const quadraId = req.query.quadraId || req.query.quadra_id;
   if (quadraId) where.quadraId = validarId(quadraId, "Quadra");
@@ -61,7 +74,7 @@ export const listarDisponiveis = executarAssincrono(async (req, res) => {
     include: [{ model: Quadra, as: "quadra", where: { status: "ativa" } }],
     order: [["data", "ASC"], ["horaInicio", "ASC"]],
   });
-  res.json({ horarios });
+  res.json({ horarios: horarios.filter((horario) => funcionaNaData(String(horario.data).slice(0, 10))) });
 });
 
 async function alterarBloqueio(req, res, novoStatus) {

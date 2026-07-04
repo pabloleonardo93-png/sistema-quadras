@@ -27,7 +27,7 @@ export function DestaquesSection({
     },
     {
       icon: Clock3,
-      value: "7/7",
+      value: "6/7",
       label: "dias de agenda",
       detail: arenaInfo.openingHours,
     },

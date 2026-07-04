@@ -19,13 +19,27 @@ import { Button } from "./Button";
 import { HorariosDisponiveis } from "./HorariosDisponiveis";
 import { SectionHeading } from "./SectionHeading";
 
-const getTomorrow = () => {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().split("T")[0];
+const isDateParam = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
-const isDateParam = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+const isOpenDate = (value) =>
+  isDateParam(value) && new Date(`${value}T12:00:00`).getDay() !== 1;
+
+const getNextOpenDate = () => {
+  const date = new Date();
+
+  do {
+    date.setDate(date.getDate() + 1);
+  } while (date.getDay() === 1);
+
+  return formatDateInput(date);
+};
 
 const emptyCustomer = { name: "", phone: "", email: "" };
 const PHONE_MIN_DIGITS = 10;
@@ -60,7 +74,7 @@ export function ReservaRapida({
 }) {
   const navigate = useNavigate();
   const [date, setDate] = useState(() =>
-    isDateParam(initialDate) ? initialDate : getTomorrow(),
+    isDateParam(initialDate) ? initialDate : getNextOpenDate(),
   );
   const [selectedTime, setSelectedTime] = useState(() =>
     initialTimeId ? String(initialTimeId) : "",
@@ -120,6 +134,14 @@ export function ReservaRapida({
         return;
       }
 
+      if (!isOpenDate(date)) {
+        setAvailableTimes([]);
+        setSelectedTime("");
+        setMostrarDados(false);
+        setTimesError("A arena funciona de terça a domingo, das 08:00 às 22:00.");
+        return;
+      }
+
       setTimesLoading(true);
       setTimesError("");
 
@@ -137,7 +159,7 @@ export function ReservaRapida({
           return (
             Number(horario.quadraId) === Number(selectedCourtData.apiId) &&
             horaInicio >= "08:00" &&
-            horaInicio < "23:00"
+            horaInicio < "22:00"
           );
         });
         const horariosUnicos = Array.from(
@@ -371,7 +393,7 @@ export function ReservaRapida({
                 <small>{arenaInfo.neighborhood}</small>
               </span>
             </div>
-            <p>Pagamento online no checkout seguro, com Pix, cartão e boleto quando disponíveis.</p>
+            <p>Pagamento online no checkout seguro, com Pix e cartão quando disponíveis.</p>
           </aside>
 
           <div className="booking-panel">

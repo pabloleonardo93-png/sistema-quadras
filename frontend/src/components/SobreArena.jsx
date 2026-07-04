@@ -26,8 +26,8 @@ const features = [
 ];
 
 const metrics = [
-  { value: "07h", label: "abertura" },
-  { value: "23h", label: "último horário" },
+  { value: "08h", label: "abertura" },
+  { value: "22h", label: "fechamento" },
   { value: "100%", label: "agenda online" },
 ];
 
@@ -42,9 +42,9 @@ export function SobreArena() {
               alt="Partida de vôlei em uma quadra esportiva"
             />
           </div>
-          <div className="about__stamp" aria-label="Aberto todos os dias">
-            <strong>7/7</strong>
-            <span>dias de areia</span>
+          <div className="about__stamp" aria-label="Aberto de terça a domingo">
+            <strong>6/7</strong>
+            <span>terça a domingo</span>
           </div>
         </div>
 

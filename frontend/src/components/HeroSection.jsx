@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Sun,
 } from "lucide-react";
+import { arenaInfo } from "../constants/arenaInfo";
 import { Button } from "./Button";
 
 const tickerItems = [
@@ -76,7 +77,7 @@ export function HeroSection({ onReserve }) {
               <Clock3 aria-hidden="true" size={18} />
               <span>
                 <small>Funcionamento</small>
-                07h às 23h
+                {arenaInfo.openingHours}
               </span>
             </li>
             <li>

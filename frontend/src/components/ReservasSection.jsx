@@ -59,7 +59,7 @@ export function ReservasSection({ courts = [] }) {
             <CreditCard aria-hidden="true" size={24} />
             <span>
               <strong>Checkout seguro</strong>
-              <small>Pix, cartão ou boleto quando disponíveis</small>
+              <small>Pix ou cartão quando disponíveis</small>
             </span>
           </div>
 

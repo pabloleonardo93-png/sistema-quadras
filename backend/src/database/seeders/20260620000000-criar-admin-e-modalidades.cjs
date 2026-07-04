@@ -69,9 +69,15 @@ function datasFuturasPadrao() {
   return datas;
 }
 
+function funcionaNaData(data) {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
+  return diaSemana !== 1;
+}
+
 function janelasDeFuncionamento() {
   const janelas = [];
-  for (let hora = 8; hora < 23; hora += 1) {
+  for (let hora = 8; hora < 22; hora += 1) {
     const horaInicio = String(hora).padStart(2, "0") + ":00";
     const horaFim = String(hora + 1).padStart(2, "0") + ":00";
     janelas.push([horaInicio, horaFim]);
@@ -186,7 +192,7 @@ async function criarHorarios(queryInterface, agora) {
       ...datasFuturasPadrao(),
       ...datasExistentes.map((registro) => String(registro.data).slice(0, 10)),
     ]))
-      .filter((data) => data >= hoje)
+      .filter((data) => data >= hoje && funcionaNaData(data))
       .sort();
 
     for (const data of datas) {

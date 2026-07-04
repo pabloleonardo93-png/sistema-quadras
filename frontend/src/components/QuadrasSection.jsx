@@ -9,7 +9,7 @@ export function QuadrasSection({ courts = [], error = "", isLoading = false }) {
           <SectionHeading
             eyebrow="Nossa estrutura"
             title="ESCOLHA SUA QUADRA."
-            description="Espaços cuidados todos os dias para entregar segurança, conforto e jogo de qualidade."
+            description="Espaços cuidados de terça a domingo para entregar segurança, conforto e jogo de qualidade."
           />
           <div className="courts__legend" aria-label="Legenda de disponibilidade">
             <span>

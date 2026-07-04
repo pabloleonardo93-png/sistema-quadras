@@ -155,6 +155,7 @@ export async function criarCheckoutDaReserva({ reservaId }) {
     external_reference: String(reserva.id),
     metadata: { reserva_id: reserva.id },
     payment_methods: {
+      excluded_payment_types: [{ id: "ticket" }],
       installments: 3,
     },
   };
