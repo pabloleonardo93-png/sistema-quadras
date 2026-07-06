@@ -10,6 +10,9 @@ export function CardQuadra({ court }) {
   const StatusIcon = statusIcons[court.status];
   const isDisabled = court.status === "maintenance";
   const bookingUrl = `/reserva?quadra=${encodeURIComponent(court.id)}`;
+  const hourlyPrice = Number(court.valorHora || 0)
+    .toFixed(2)
+    .replace(".", ",");
 
   return (
     <article
@@ -22,8 +25,7 @@ export function CardQuadra({ court }) {
           href={bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          tabIndex={-1}
-          aria-hidden="true"
+          aria-label={`Reservar ${court.name}`}
         />
       )}
       <div className="court-card__image">
@@ -37,7 +39,11 @@ export function CardQuadra({ court }) {
       <div className="court-card__content">
         <span className="court-card__eyebrow">{court.subtitle}</span>
         <h3>{court.name}</h3>
-        <p>{court.detail}</p>
+        <p className="court-card__price">
+          <span>Valor da reserva</span>
+          <strong>R$ {hourlyPrice}</strong>
+          <small>por horário</small>
+        </p>
         <div className="court-card__tags">
           {court.modalities.map((modality) => (
             <span key={modality}>{modality}</span>
@@ -48,15 +54,13 @@ export function CardQuadra({ court }) {
             Indisponível
           </span>
         ) : (
-          <a
+          <span
             className="court-card__action"
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            aria-hidden="true"
           >
             Reservar esta quadra
             <ArrowRight aria-hidden="true" size={18} />
-          </a>
+          </span>
         )}
       </div>
     </article>

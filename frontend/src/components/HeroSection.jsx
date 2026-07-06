@@ -60,6 +60,20 @@ export function HeroSection({ onReserve }) {
               <ArrowDown aria-hidden="true" size={17} />
             </a>
           </div>
+          <div className="hero__proof-row" aria-label="Informações principais">
+            <span>
+              <strong>Terça a domingo</strong>
+              Agenda aberta
+            </span>
+            <span>
+              <strong>08h às 22h</strong>
+              Funcionamento
+            </span>
+            <span>
+              <strong>Reserva online</strong>
+              Pix ou cartão no checkout
+            </span>
+          </div>
         </div>
 
         <aside className="match-card" aria-label="Informações rápidas">

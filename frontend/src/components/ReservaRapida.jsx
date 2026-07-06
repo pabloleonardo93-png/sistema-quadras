@@ -119,9 +119,6 @@ export function ReservaRapida({
       ? "02"
       : "01"
     : "03";
-  const bookingHeadingDescription = isCustomerDataRoute
-    ? "Revise a escolha, preencha seus dados e finalize no checkout seguro."
-    : "Escolha a quadra, veja os horários disponíveis e avance para o pagamento.";
 
   useEffect(() => {
     let active = true;
@@ -131,6 +128,8 @@ export function ReservaRapida({
         setAvailableTimes([]);
         setSelectedTime("");
         setMostrarDados(false);
+        setTimesLoading(false);
+        setTimesError("");
         return;
       }
 
@@ -138,6 +137,7 @@ export function ReservaRapida({
         setAvailableTimes([]);
         setSelectedTime("");
         setMostrarDados(false);
+        setTimesLoading(false);
         setTimesError("A arena funciona de terça a domingo, das 08:00 às 22:00.");
         return;
       }
@@ -348,7 +348,6 @@ export function ReservaRapida({
         <SectionHeading
           eyebrow="Reserva rápida"
           title="SEU HORÁRIO EM POUCOS TOQUES."
-          description={bookingHeadingDescription}
           inverse
         />
 
@@ -358,6 +357,10 @@ export function ReservaRapida({
             <div className="booking-summary__court">
               <span>{selectedCourtData?.name || "Escolha a quadra"}</span>
               <small>{selectedModality || "Escolha a modalidade"}</small>
+            </div>
+            <div className="booking-summary__price">
+              <span>Valor da reserva</span>
+              <strong>R$ {valorFormatado}</strong>
             </div>
             {selectedCourtData?.image && (
               <div className="booking-summary__photo">
@@ -381,10 +384,6 @@ export function ReservaRapida({
                 <Clock3 aria-hidden="true" size={18} />
                 {selectedHorario?.time || "--:--"}
               </span>
-            </div>
-            <div className="booking-summary__price">
-              <span>Valor da reserva</span>
-              <strong>R$ {valorFormatado}</strong>
             </div>
             <div className="booking-summary__location">
               <MapPin aria-hidden="true" size={18} />

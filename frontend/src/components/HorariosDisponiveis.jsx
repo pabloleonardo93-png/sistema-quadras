@@ -5,6 +5,8 @@ export function HorariosDisponiveis({
   times = [],
   onSelect,
 }) {
+  const hasReservedTimes = times.some(({ available = true }) => !available);
+
   return (
     <div className="time-picker">
       <div className="time-picker__heading">
@@ -38,9 +40,11 @@ export function HorariosDisponiveis({
           </button>
         ))}
       </div>
-      <p className="time-picker__hint">
-        Horários riscados já estão reservados.
-      </p>
+      {!isLoading && !error && hasReservedTimes && (
+        <p className="time-picker__hint">
+          Horários riscados já estão reservados.
+        </p>
+      )}
     </div>
   );
 }

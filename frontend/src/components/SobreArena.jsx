@@ -51,7 +51,7 @@ export function SobreArena() {
         <div className="about__content">
           <SectionHeading
             eyebrow="Sobre o espaço"
-            title="ESTRUTURA PARA JOGAR, FICAR E VOLTAR."
+            title="ESPAÇO PRONTO PARA O SEU MELHOR JOGO."
             description={`O ${brand.name} aproxima esporte, sol e bons encontros. A experiência foi pensada para você escolher o horário, chegar com tranquilidade e aproveitar a partida.`}
           />
           <div className="about__metrics" aria-label="Resumo da estrutura">

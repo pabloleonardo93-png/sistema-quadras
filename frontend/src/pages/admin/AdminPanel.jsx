@@ -320,7 +320,7 @@ export function AdminLogin() {
           </div>
         </label>
         {error && (
-          <p className="admin-login__error" role="status">
+          <p className="admin-login__error" role="alert">
             {error}
           </p>
         )}
