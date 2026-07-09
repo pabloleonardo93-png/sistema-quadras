@@ -606,8 +606,8 @@ img {
   overflow: hidden;
   padding: 126px 0 64px;
   background:
-    linear-gradient(90deg, rgba(5, 38, 32, 0.96) 0%, rgba(7, 56, 47, 0.86) 45%, rgba(7, 56, 47, 0.34) 100%),
-    url("/images/hero-beach-tennis-night.jpg") center center / cover;
+    linear-gradient(90deg, rgba(5, 38, 32, 0.94) 0%, rgba(7, 56, 47, 0.72) 43%, rgba(7, 56, 47, 0.22) 74%, rgba(7, 56, 47, 0.12) 100%),
+    url("/images/hero-beach-tennis-raquete-enhanced.jpg") center center / cover;
   color: var(--white);
 }
 
@@ -615,8 +615,8 @@ img {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(5, 30, 26, 0.12) 0%, transparent 42%, rgba(8, 44, 37, 0.94) 100%),
-    linear-gradient(90deg, rgba(7, 56, 47, 0.22), transparent 62%);
+    linear-gradient(180deg, rgba(5, 30, 26, 0.08) 0%, transparent 46%, rgba(8, 44, 37, 0.76) 100%),
+    linear-gradient(90deg, rgba(7, 56, 47, 0.18), transparent 58%);
   content: "";
 }
 
@@ -780,41 +780,56 @@ img {
 
 .match-card {
   position: relative;
-  padding: 24px;
-  border: 1px solid rgba(243, 200, 75, 0.34);
-  border-radius: var(--radius-card);
+  overflow: hidden;
+  padding: 22px;
+  border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(255, 250, 240, 0.98), rgba(251, 244, 229, 0.94)),
+    linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(250, 240, 217, 0.96)),
     var(--sand-50);
-  box-shadow: 0 18px 36px rgba(1, 28, 23, 0.24);
+  box-shadow:
+    0 8px 0 rgba(243, 200, 75, 0.48),
+    0 13px 0 rgba(7, 56, 47, 0.18);
   color: var(--ink);
 }
 
 .match-card::before {
-  display: none;
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, var(--yellow-400), var(--coral-500), var(--green-700));
+  content: "";
 }
 
 .match-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.match-card__header > span:first-child {
+  color: color-mix(in srgb, var(--ink) 68%, var(--muted));
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 .live-pill {
   display: inline-flex;
+  min-height: 32px;
   align-items: center;
-  gap: 5px;
-  border-radius: 99px;
-  padding: 6px 9px;
-  background: color-mix(in srgb, var(--green-700) 14%, var(--white));
-  color: var(--green-700);
+  gap: 7px;
+  border-radius: 999px;
+  padding: 0 11px;
+  background: color-mix(in srgb, var(--green-700) 12%, var(--white));
+  color: var(--green-800);
+  font-size: 0.68rem;
+  font-weight: 900;
   letter-spacing: 0;
   text-transform: none;
+  white-space: nowrap;
 }
 
 .live-pill::before {
@@ -827,61 +842,102 @@ img {
 
 .match-card__date {
   display: flex;
-  align-items: baseline;
+  align-items: end;
   justify-content: space-between;
-  margin-top: 18px;
+  gap: 16px;
+  padding: 24px 0 20px;
   font-family: var(--font-display);
 }
 
 .match-card__date strong {
   color: var(--green-700);
-  font-size: 2.45rem;
-  line-height: 1;
+  font-size: clamp(2.35rem, 3.8vw, 2.85rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.88;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .match-card__day {
-  font-size: 1.2rem;
-  font-weight: 800;
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: var(--green-900);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .match-card__divider {
   height: 1px;
-  margin: 20px -20px;
-  background: var(--line);
+  margin: 0 -22px 8px;
+  background: color-mix(in srgb, var(--green-700) 17%, transparent);
 }
 
 .match-card ul {
   display: grid;
-  gap: 18px;
-  margin: 0 0 24px;
+  gap: 0;
+  margin: 0 0 18px;
   padding: 0;
   list-style: none;
 }
 
 .match-card li {
-  display: flex;
+  display: grid;
   align-items: center;
+  grid-template-columns: 34px minmax(0, 1fr);
   gap: 12px;
+  padding: 12px 0;
+}
+
+.match-card li + li {
+  border-top: 1px solid color-mix(in srgb, var(--green-700) 10%, transparent);
 }
 
 .match-card li > svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--coral-500) 13%, transparent);
   color: var(--coral-500);
 }
 
 .match-card li span {
   display: grid;
-  font-size: 0.86rem;
-  font-weight: 700;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.28;
 }
 
 .match-card li small {
-  color: var(--muted-strong);
-  font-size: 0.76rem;
-  font-weight: 500;
+  color: color-mix(in srgb, var(--green-900) 58%, var(--muted));
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .match-card .button {
   width: 100%;
+  min-height: 56px;
+  border-radius: 18px;
+  background: #0f201c;
+  font-weight: 900;
+}
+
+.match-card .button:hover {
+  background: var(--green-900);
+  box-shadow: none;
+}
+
+.match-card .button svg {
+  color: var(--yellow-400);
 }
 
 .hero__ticker {
@@ -1402,12 +1458,13 @@ img {
 .reservation-action {
   display: grid;
   width: 100%;
-  min-height: 168px;
-  align-content: space-between;
-  gap: 18px;
+  min-height: 112px;
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-md);
-  padding: 22px;
+  border-radius: 18px;
+  padding: 18px;
   appearance: none;
   background: rgba(255, 255, 255, 0.06);
   color: var(--white);
@@ -1433,12 +1490,6 @@ a.reservation-action {
   cursor: default;
 }
 
-.reservation-action--info:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  transform: none;
-}
-
 .reservation-action--primary {
   background: var(--yellow-400);
   color: var(--ink);
@@ -1449,21 +1500,29 @@ a.reservation-action {
 }
 
 .reservation-action > svg:first-child {
+  box-sizing: content-box;
+  width: 22px;
+  height: 22px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(243, 200, 75, 0.1);
   color: var(--yellow-400);
 }
 
 .reservation-action--primary > svg:first-child {
+  background: rgba(7, 56, 47, 0.12);
   color: var(--green-900);
 }
 
 .reservation-action span {
   display: grid;
-  gap: 8px;
+  gap: 5px;
+  min-width: 0;
 }
 
 .reservation-action strong {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: clamp(1.7rem, 2.6vw, 2rem);
   letter-spacing: 0;
   line-height: 0.95;
 }
@@ -1482,6 +1541,7 @@ a.reservation-action {
 
 .reservation-action > svg:last-child {
   justify-self: end;
+  color: currentColor;
 }
 
 .reservation-steps {
@@ -3125,8 +3185,8 @@ a.reservation-action {
     min-height: auto;
     padding: 118px 0 92px;
     background:
-      linear-gradient(180deg, rgba(7, 56, 47, 0.72), rgba(7, 56, 47, 0.97) 68%),
-      url("/images/hero-beach-tennis-night.jpg") 42% center / cover;
+      linear-gradient(180deg, rgba(7, 56, 47, 0.66), rgba(7, 56, 47, 0.94) 68%),
+      url("/images/hero-beach-tennis-raquete-enhanced.jpg") 52% center / cover;
   }
 
   .hero__court-lines {
@@ -3302,7 +3362,7 @@ a.reservation-action {
   }
 
   .reservation-action {
-    min-height: 158px;
+    min-height: 104px;
   }
 
   .reservation-step,

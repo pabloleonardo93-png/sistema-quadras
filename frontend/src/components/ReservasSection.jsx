@@ -21,7 +21,7 @@ export function ReservasSection({ courts = [] }) {
 
   const priceLabel = minCourtPrice
     ? `A partir de R$ ${minCourtPrice.toFixed(2).replace(".", ",")} por horário`
-    : "Valores atualizados com a equipe";
+    : "Confira o valor antes de confirmar";
 
   return (
     <section className="section reservations-flow" id="reservas">
@@ -80,7 +80,7 @@ export function ReservasSection({ courts = [] }) {
           <div className="reservation-action reservation-action--info">
             <Banknote aria-hidden="true" size={24} />
             <span>
-              <strong>Valor transparente</strong>
+              <strong>Preço claro</strong>
               <small>{priceLabel}</small>
             </span>
           </div>
