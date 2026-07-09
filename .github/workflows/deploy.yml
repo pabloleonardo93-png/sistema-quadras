@@ -1,4 +1,5 @@
 name: build-and-push
+
 on:
   push:
     branches: [ main ]
@@ -8,18 +9,30 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write            # permite ao job publicar no GHCR
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/login-action@v3
+      - name: Login no GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - name: Build e publica frontend
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ghcr.io/pabloleonardo93-png/sistema-quadras:latest
+          build-args: |
+            VITE_API_URL=/api
+
+      - name: Build e publica backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/pabloleonardo93-png/sistema-quadras-backend:latest

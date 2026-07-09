@@ -4,11 +4,11 @@ services:
     container_name: pe-na-areia-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Configure POSTGRES_DB no arquivo .env}
-      POSTGRES_USER: ${POSTGRES_USER:?Configure POSTGRES_USER no arquivo .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no arquivo .env}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      POSTGRES_DB: ${POSTGRES_DB:?Configure POSTGRES_DB no .env da VPS}
+      POSTGRES_USER: ${POSTGRES_USER:?Configure POSTGRES_USER no .env da VPS}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env da VPS}
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,28 +18,29 @@ services:
       retries: 10
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/pabloleonardo93-png/sistema-quadras-backend:latest
     container_name: pe-na-areia-backend
     restart: unless-stopped
+    labels:
+      wud.watch: "true"
+      wud.watch.digest: "true"
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:?Configure DB_NAME no arquivo .env}
-      DB_USER: ${DB_USER:?Configure DB_USER no arquivo .env}
-      DB_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}
-      JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET no arquivo .env}
+      DB_NAME: ${POSTGRES_DB:?Configure POSTGRES_DB no .env da VPS}
+      DB_USER: ${POSTGRES_USER:?Configure POSTGRES_USER no .env da VPS}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env da VPS}
+      JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET no .env da VPS}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       ADMIN_SEED_NAME: ${ADMIN_SEED_NAME:-Administrador Local}
-      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:?Configure ADMIN_SEED_EMAIL no arquivo .env}
-      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:?Configure ADMIN_SEED_PASSWORD no arquivo .env}
+      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:?Configure ADMIN_SEED_EMAIL no .env da VPS}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:?Configure ADMIN_SEED_PASSWORD no .env da VPS}
       UPLOAD_DIR: ${UPLOAD_DIR:-uploads}
       UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE:-5242880}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
@@ -47,26 +48,23 @@ services:
       MERCADO_PAGO_ACCESS_TOKEN: ${MERCADO_PAGO_ACCESS_TOKEN:-}
       MERCADO_PAGO_WEBHOOK_URL: ${MERCADO_PAGO_WEBHOOK_URL:-}
       MERCADO_PAGO_WEBHOOK_SECRET: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
-    ports:
-      - "3000:3000"
     expose:
       - "3000"
     volumes:
       - backend_uploads:/app/uploads
     command: sh -c "npm run db:migrate && npm run db:seed && npm start"
 
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: pe-na-areia-nginx
+  frontend:
+    image: ghcr.io/pabloleonardo93-png/sistema-quadras:latest
+    container_name: pe-na-areia-frontend
     restart: unless-stopped
+    labels:
+      wud.watch: "true"
+      wud.watch.digest: "true"
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "${FRONTEND_BIND:-127.0.0.1:8080}:80"
 
 volumes:
   postgres_data:
