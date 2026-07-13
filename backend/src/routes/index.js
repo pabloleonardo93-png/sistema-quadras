@@ -10,11 +10,13 @@ import pagamentoRoutes from "./pagamentoRoutes.js";
 import quadraRoutes from "./quadraRoutes.js";
 import relatorioRoutes from "./relatorioRoutes.js";
 import reservaRoutes from "./reservaRoutes.js";
+import verificacaoEmailRoutes from "./verificacaoEmailRoutes.js";
 import webhookRoutes from "./webhookRoutes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
 router.use("/clientes", clienteRoutes);
+router.use("/verificacao-email", verificacaoEmailRoutes);
 router.use("/quadras", quadraRoutes);
 router.use("/modalidades", modalidadeRoutes);
 router.use("/horarios", horarioRoutes);

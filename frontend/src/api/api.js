@@ -34,6 +34,7 @@ async function request(path, options = {}) {
   const token = getToken();
   const response = await fetch(buildUrl(path, params), {
     ...rest,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -64,11 +65,11 @@ async function request(path, options = {}) {
 }
 
 const api = {
-  get(path, params) {
-    return request(path, { method: "GET", params });
+  get(path, params, options = {}) {
+    return request(path, { ...options, method: "GET", params });
   },
-  post(path, body) {
-    return request(path, { method: "POST", body });
+  post(path, body, options = {}) {
+    return request(path, { ...options, method: "POST", body });
   },
   put(path, body) {
     return request(path, { method: "PUT", body });

@@ -1,9 +1,11 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { calcularPagamentoExpiraEm, tempoPagamentoMinutos } from "../config/pagamento.js";
 import sequelize from "../config/database.js";
 import Horario from "../models/Horario.js";
 import Reserva from "../models/Reserva.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import { validarId } from "../utils/validacoes.js";
+import { dadosExpiracaoPagamento } from "./expiracaoReservaService.js";
 import { registrarLog } from "./logService.js";
 import { inclusoesReserva } from "./reservaService.js";
 
@@ -128,6 +130,51 @@ function dadosDoItem(reserva) {
   };
 }
 
+function separarNome(nome = "") {
+  const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  const [primeiroNome = "Cliente", ...sobrenomes] = partes;
+  return {
+    primeiroNome,
+    sobrenome: sobrenomes.join(" "),
+  };
+}
+
+function apenasDigitos(valor = "") {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+function dadosDoPagador(reserva) {
+  const { primeiroNome, sobrenome } = separarNome(reserva.cliente?.nome);
+  const telefone = apenasDigitos(reserva.cliente?.telefone);
+  const payer = {
+    email: reserva.cliente?.email,
+    first_name: primeiroNome,
+  };
+
+  if (sobrenome) payer.last_name = sobrenome;
+  if (telefone.length >= 10) {
+    payer.phone = {
+      area_code: telefone.slice(0, 2),
+      number: telefone.slice(2),
+    };
+  }
+
+  return payer;
+}
+
+function dadosPixDoPagamento(pagamento) {
+  const transactionData = pagamento.point_of_interaction?.transaction_data || {};
+  return {
+    pagamentoId: String(pagamento.id),
+    status: statusPagamentoMercadoPago(pagamento.status),
+    mercadoPagoStatus: pagamento.status,
+    mercadoPagoStatusDetail: pagamento.status_detail || null,
+    qrCode: transactionData.qr_code || null,
+    qrCodeBase64: transactionData.qr_code_base64 || null,
+    ticketUrl: transactionData.ticket_url || null,
+  };
+}
+
 export async function criarCheckoutDaReserva({ reservaId }) {
   const reserva = await Reserva.findByPk(validarId(reservaId, "Reserva"), {
     include: inclusoesReserva,
@@ -145,6 +192,8 @@ export async function criarCheckoutDaReserva({ reservaId }) {
   const publicBaseUrl = !isLocalUrl(baseUrl);
   const publicWebhookUrl = webhookUrl();
   const hasPublicWebhookUrl = !isLocalUrl(publicWebhookUrl);
+  const pagamentoCriadoEm = new Date();
+  const pagamentoExpiraEm = calcularPagamentoExpiraEm(pagamentoCriadoEm);
   const preferenceBody = {
     items: [dadosDoItem(reserva)],
     payer: {
@@ -155,9 +204,13 @@ export async function criarCheckoutDaReserva({ reservaId }) {
     external_reference: String(reserva.id),
     metadata: { reserva_id: reserva.id },
     payment_methods: {
-      excluded_payment_types: [{ id: "ticket" }],
+      excluded_payment_methods: [{ id: "pix" }],
+      excluded_payment_types: [{ id: "ticket" }, { id: "bank_transfer" }],
       installments: 3,
     },
+    expires: true,
+    expiration_date_from: pagamentoCriadoEm.toISOString(),
+    expiration_date_to: pagamentoExpiraEm.toISOString(),
   };
 
   if (publicBaseUrl) {
@@ -188,7 +241,7 @@ export async function criarCheckoutDaReserva({ reservaId }) {
     pagamentoStatus: "pendente",
     mercadoPagoPreferenceId: preference.id,
     pagamentoUrl: checkoutUrl,
-    pagamentoCriadoEm: new Date(),
+    pagamentoCriadoEm,
   });
 
   await registrarLog({
@@ -199,7 +252,85 @@ export async function criarCheckoutDaReserva({ reservaId }) {
   });
 
   const reservaAtualizada = await Reserva.findByPk(reserva.id, { include: inclusoesReserva });
-  return { reserva: reservaAtualizada, checkoutUrl, preferenceId: preference.id };
+  return {
+    reserva: reservaAtualizada,
+    checkoutUrl,
+    preferenceId: preference.id,
+    pagamentoExpiraEm: pagamentoExpiraEm.toISOString(),
+    tempoPagamentoMinutos,
+  };
+}
+
+export async function criarPixDaReserva({ reservaId }) {
+  const reserva = await Reserva.findByPk(validarId(reservaId, "Reserva"), {
+    include: inclusoesReserva,
+  });
+
+  if (!reserva) throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
+  if (reserva.status === "cancelada" || reserva.status === "expirada" || reserva.status === "finalizada") {
+    throw new ErroDaAplicacao("Essa reserva nao pode receber pagamento.", 409);
+  }
+  if (reserva.pagamentoStatus === "aprovado") {
+    throw new ErroDaAplicacao("Essa reserva ja esta paga.", 409);
+  }
+
+  const item = dadosDoItem(reserva);
+  const publicWebhookUrl = webhookUrl();
+  const hasPublicWebhookUrl = !isLocalUrl(publicWebhookUrl);
+  const pagamentoCriadoEm = new Date();
+  const pagamentoExpiraEm = calcularPagamentoExpiraEm(pagamentoCriadoEm);
+  const paymentBody = {
+    transaction_amount: item.unit_price,
+    description: item.title,
+    payment_method_id: "pix",
+    date_of_expiration: pagamentoExpiraEm.toISOString(),
+    external_reference: String(reserva.id),
+    metadata: { reserva_id: reserva.id },
+    payer: dadosDoPagador(reserva),
+  };
+
+  if (hasPublicWebhookUrl) {
+    paymentBody.notification_url = publicWebhookUrl;
+  }
+
+  const pagamento = await chamarMercadoPago("/v1/payments", {
+    method: "POST",
+    headers: { "X-Idempotency-Key": `reserva-pix-${reserva.id}-${randomUUID()}` },
+    body: JSON.stringify(paymentBody),
+  });
+
+  const pix = dadosPixDoPagamento(pagamento);
+  if (!pix.qrCode && !pix.qrCodeBase64 && !pix.ticketUrl) {
+    throw new ErroDaAplicacao("Mercado Pago nao retornou os dados do Pix.", 502);
+  }
+
+  await reserva.update({
+    pagamentoStatus: pix.status,
+    mercadoPagoPaymentId: pix.pagamentoId,
+    mercadoPagoStatus: pix.mercadoPagoStatus,
+    mercadoPagoStatusDetail: pix.mercadoPagoStatusDetail,
+    pagamentoUrl: pix.ticketUrl,
+    pagamentoCriadoEm,
+  });
+
+  await registrarLog({
+    acao: "pix_criado",
+    entidade: "reserva",
+    entidadeId: reserva.id,
+    detalhes: {
+      paymentId: pix.pagamentoId,
+      mercadoPagoStatus: pix.mercadoPagoStatus,
+      valorTotal: reserva.valorTotal,
+    },
+  });
+
+  const reservaAtualizada = await Reserva.findByPk(reserva.id, { include: inclusoesReserva });
+  return {
+    reserva: reservaAtualizada,
+    pix,
+    pagamentoExpiraEm: pagamentoExpiraEm.toISOString(),
+    tempoPagamentoMinutos,
+  };
 }
 
 export async function buscarPagamentoMercadoPago(paymentId) {
@@ -235,7 +366,9 @@ export async function processarWebhookMercadoPago({ paymentId }) {
 
     if (pagamentoStatus === "aprovado") {
       atualizacao.pagoEm = pagamento.date_approved ? new Date(pagamento.date_approved) : new Date();
-      if (reserva.status !== "finalizada") atualizacao.status = "confirmada";
+      if (reserva.status === "aguardando_pagamento") {
+        atualizacao.status = "confirmada";
+      }
     }
 
     if (pagamento.status === "expired" && reserva.status !== "finalizada") {
@@ -269,4 +402,11 @@ export async function processarWebhookMercadoPago({ paymentId }) {
 
     return { processado: true, reservaId: reserva.id, pagamentoStatus };
   });
+}
+
+export function anexarExpiracaoPagamento(reserva) {
+  return {
+    ...dadosExpiracaoPagamento(reserva),
+    tempoPagamentoMinutos,
+  };
 }

@@ -2057,6 +2057,184 @@ a.reservation-action {
   grid-column: 1 / -1;
 }
 
+.email-verification {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.email-verification__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.email-verification__header > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(11, 93, 75, 0.1);
+  color: var(--green-700);
+}
+
+.email-verification__header div {
+  display: grid;
+  gap: 3px;
+}
+
+.email-verification__header strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.email-verification__header small {
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+}
+
+.email-verification__timer {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(11, 93, 75, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  background: rgba(11, 93, 75, 0.06);
+  color: var(--green-900);
+}
+
+.email-verification__timer svg {
+  color: var(--green-700);
+}
+
+.email-verification__timer span {
+  display: grid;
+  gap: 1px;
+}
+
+.email-verification__timer small {
+  color: var(--muted-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.email-verification__timer strong {
+  color: var(--green-900);
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.email-verification__timer.is-expired {
+  border-color: rgba(166, 67, 43, 0.32);
+  background: rgba(166, 67, 43, 0.08);
+  color: #7f2f20;
+}
+
+.email-verification__timer.is-expired svg,
+.email-verification__timer.is-expired strong {
+  color: #7f2f20;
+}
+
+.email-verification__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.verified-contact-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(11, 93, 75, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  background: rgba(11, 93, 75, 0.07);
+}
+
+.verified-contact-notice > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green-700);
+  color: var(--white);
+}
+
+.verified-contact-notice div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.verified-contact-notice strong {
+  color: var(--green-900);
+  font-size: 0.88rem;
+}
+
+.verified-contact-notice small {
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.verified-email-field {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.locked-input {
+  position: relative;
+  display: block;
+}
+
+.locked-input input {
+  padding-right: 44px;
+  background: var(--field-disabled-bg);
+  color: var(--field-disabled-ink);
+}
+
+.locked-input svg {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: var(--green-700);
+  transform: translateY(-50%);
+}
+
+.verified-email-field button {
+  min-height: 54px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  padding: 0 16px;
+  background: var(--white);
+  color: var(--green-700);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.form-success {
+  margin: 0;
+  border-radius: 10px;
+  padding: 11px 14px;
+  background: rgba(11, 93, 75, 0.08);
+  color: var(--green-900);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .payment-review {
   display: grid;
   gap: 18px;
@@ -2128,6 +2306,16 @@ a.reservation-action {
   transform: translateY(-2px);
 }
 
+.payment-methods__option:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.payment-methods__option:disabled:hover {
+  border-color: var(--field-border);
+  transform: none;
+}
+
 .payment-methods__option:focus-visible {
   outline: 3px solid rgba(247, 199, 57, 0.85);
   outline-offset: 3px;
@@ -2183,6 +2371,171 @@ a.reservation-action {
   color: var(--ink);
   font-size: 0.9rem;
   overflow-wrap: anywhere;
+}
+
+.pix-payment {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  border: 1px solid rgba(11, 93, 75, 0.18);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  background: rgba(11, 93, 75, 0.045);
+}
+
+.pix-payment__qr {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--white);
+  color: var(--green-700);
+}
+
+.pix-payment__qr img {
+  display: block;
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+}
+
+.pix-payment__details {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.pix-payment__details > strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.pix-payment__details > small {
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.pix-payment__details label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pix-payment__details textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--field-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pix-payment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pix-payment__actions button,
+.pix-payment__actions a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: var(--white);
+  color: var(--green-700);
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--transition), transform var(--transition);
+}
+
+.pix-payment__actions button:hover,
+.pix-payment__actions a:hover {
+  border-color: var(--green-700);
+  transform: translateY(-1px);
+}
+
+.pix-payment__actions button:focus-visible,
+.pix-payment__actions a:focus-visible {
+  outline: 3px solid rgba(247, 199, 57, 0.85);
+  outline-offset: 3px;
+}
+
+.pix-payment__feedback {
+  margin: 0;
+  color: var(--green-700);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.payment-countdown {
+  display: grid;
+  grid-template-columns: auto minmax(110px, auto) 1fr;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(11, 93, 75, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: rgba(11, 93, 75, 0.06);
+  color: var(--green-900);
+}
+
+.payment-countdown > svg {
+  color: var(--green-700);
+}
+
+.payment-countdown span {
+  display: grid;
+  gap: 2px;
+}
+
+.payment-countdown small {
+  color: var(--muted-strong);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.payment-countdown strong {
+  color: var(--green-900);
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.payment-countdown p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.payment-countdown.is-expired {
+  border-color: rgba(166, 67, 43, 0.32);
+  background: rgba(166, 67, 43, 0.08);
+  color: #7f2f20;
+}
+
+.payment-countdown.is-expired > svg,
+.payment-countdown.is-expired strong {
+  color: #7f2f20;
 }
 
 .time-picker__heading {
@@ -2944,6 +3297,13 @@ a.reservation-action {
   font-weight: 800;
 }
 
+.payment-return__summary em {
+  color: var(--green-700);
+  font-size: 0.86rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .payment-return__actions {
   display: flex;
   flex-wrap: wrap;
@@ -3462,12 +3822,45 @@ a.reservation-action {
     grid-column: auto;
   }
 
+  .email-verification__actions,
+  .verified-email-field {
+    grid-template-columns: 1fr;
+  }
+
+  .email-verification__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .email-verification__actions .button,
+  .verified-email-field button {
+    width: 100%;
+  }
+
   .time-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 
   .payment-review__grid {
     grid-template-columns: 1fr;
+  }
+
+  .pix-payment {
+    grid-template-columns: 1fr;
+  }
+
+  .pix-payment__qr {
+    max-width: 260px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .payment-countdown {
+    grid-template-columns: auto 1fr;
+  }
+
+  .payment-countdown p {
+    grid-column: 1 / -1;
   }
 
   .payment-methods {

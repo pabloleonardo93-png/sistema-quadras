@@ -51,12 +51,17 @@ export async function criarReserva({
   observacoes,
   adminId = null,
   enderecoIp = null,
+  emailVerificado = null,
 }) {
   try {
     return await sequelize.transaction(async (transaction) => {
       const cliente = await Cliente.findByPk(validarId(clienteId, "Cliente"), { transaction });
       if (!cliente || cliente.status !== "ativo") {
         throw new ErroDaAplicacao("Cliente não encontrado ou inativo.", 409);
+      }
+
+      if (!emailVerificado?.email || emailVerificado.email !== cliente.email) {
+        throw new ErroDaAplicacao("Valide o e-mail da reserva antes de continuar.", 403);
       }
 
       const quadra = await Quadra.findByPk(validarId(quadraId, "Quadra"), {
@@ -83,6 +88,7 @@ export async function criarReserva({
 
       const reserva = await Reserva.create({
         clienteId: cliente.id,
+        emailVerificacaoId: emailVerificado.verificacaoId,
         quadraId: quadra.id,
         modalidadeId: modalidade.id,
         horarioId: horario.id,
@@ -95,6 +101,10 @@ export async function criarReserva({
         observacoes: typeof observacoes === "string" ? observacoes.trim() || null : null,
       }, { transaction });
 
+      if (!cliente.emailVerificadoEm || cliente.emailVerificadoEm < emailVerificado.validadoEm) {
+        await cliente.update({ emailVerificadoEm: emailVerificado.validadoEm }, { transaction });
+      }
+
       await horario.update({ status: "reservado" }, { transaction });
       await registrarLog({
         adminId,
@@ -102,7 +112,12 @@ export async function criarReserva({
         entidade: "reserva",
         entidadeId: reserva.id,
         enderecoIp,
-        detalhes: { clienteId: cliente.id, quadraId: quadra.id, horarioId: horario.id },
+        detalhes: {
+          clienteId: cliente.id,
+          quadraId: quadra.id,
+          horarioId: horario.id,
+          emailVerificacaoId: emailVerificado.verificacaoId,
+        },
         transaction,
       });
       return Reserva.findByPk(reserva.id, { include: inclusoesReserva, transaction });
@@ -134,6 +149,9 @@ export async function alterarStatusDaReserva({
 
     const statusAnterior = reserva.status;
     const atualizacao = { status: novoStatus };
+    if (novoStatus === "confirmada" && reserva.pagamentoStatus !== "aprovado") {
+      throw new ErroDaAplicacao("A reserva so pode ser confirmada apos pagamento aprovado.", 409);
+    }
     if (novoStatus === "cancelada" && reserva.pagamentoStatus !== "aprovado") {
       atualizacao.pagamentoStatus = "cancelado";
     }

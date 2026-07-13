@@ -4,6 +4,7 @@ import { opcoesComuns } from "./opcoesComuns.js";
 
 const Reserva = sequelize.define("Reserva", {
   clienteId: { type: DataTypes.INTEGER, allowNull: false, field: "cliente_id" },
+  emailVerificacaoId: { type: DataTypes.INTEGER, allowNull: true, field: "email_verificacao_id" },
   quadraId: { type: DataTypes.INTEGER, allowNull: false, field: "quadra_id" },
   modalidadeId: { type: DataTypes.INTEGER, allowNull: false, field: "modalidade_id" },
   horarioId: { type: DataTypes.INTEGER, allowNull: false, field: "horario_id" },

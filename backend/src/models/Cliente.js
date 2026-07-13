@@ -6,6 +6,7 @@ const Cliente = sequelize.define("Cliente", {
   nome: { type: DataTypes.STRING(120), allowNull: false },
   telefone: { type: DataTypes.STRING(30), allowNull: false },
   email: { type: DataTypes.STRING(160), allowNull: false, unique: true, validate: { isEmail: true } },
+  emailVerificadoEm: { type: DataTypes.DATE, allowNull: true, field: "email_verificado_em" },
   status: { type: DataTypes.ENUM("ativo", "inativo"), allowNull: false, defaultValue: "ativo" },
 }, { ...opcoesComuns, tableName: "clientes" });
 

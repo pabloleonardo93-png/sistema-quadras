@@ -1,45 +1,53 @@
 import { Op } from "sequelize";
 import Cliente from "../models/Cliente.js";
+import {
+  buscarClientePorEmailValidado,
+  clientePublico,
+  criarOuAtualizarClienteValidado,
+} from "../services/clienteService.js";
 import { registrarLog } from "../services/logService.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
-import { validarEmail, validarId, validarStatus, validarTexto } from "../utils/validacoes.js";
+import {
+  validarEmail,
+  validarId,
+  validarStatus,
+  validarTelefoneBrasil,
+  validarTexto,
+} from "../utils/validacoes.js";
 
 function dadosDoCliente(corpo) {
   return {
     nome: validarTexto(corpo.nome, "Nome", 120),
-    telefone: validarTexto(corpo.telefone, "Telefone", 30),
+    telefone: validarTelefoneBrasil(corpo.telefone),
     email: validarEmail(corpo.email),
   };
 }
 
 export const criar = executarAssincrono(async (req, res) => {
-  const dados = dadosDoCliente(req.body);
-  const existente = await Cliente.findOne({ where: { email: dados.email } });
-  if (existente) {
-    if (existente.status !== "ativo") {
-      throw new ErroDaAplicacao("Cliente encontrado, mas está inativo.", 409);
-    }
-
-    await existente.update({
-      nome: dados.nome,
-      telefone: dados.telefone,
-    });
-
-    return res.json({
-      mensagem: "Cliente já cadastrado. Dados atualizados para a reserva.",
-      cliente: existente,
-    });
-  }
-
-  const cliente = await Cliente.create(dados);
-  await registrarLog({
-    acao: "cliente_criado",
-    entidade: "cliente",
-    entidadeId: cliente.id,
+  const cliente = await criarOuAtualizarClienteValidado({
+    nome: req.body.nome,
+    telefone: req.body.telefone,
+    email: req.emailVerificado.email,
+    validadoEm: req.emailVerificado.validadoEm,
     enderecoIp: req.ip,
   });
-  res.status(201).json({ mensagem: "Cliente cadastrado com sucesso.", cliente });
+
+  res.json({
+    mensagem: "Dados do cliente salvos com sucesso.",
+    cliente: clientePublico(cliente),
+  });
+});
+
+export const perfilVerificado = executarAssincrono(async (req, res) => {
+  const cliente = await buscarClientePorEmailValidado({
+    email: req.emailVerificado.email,
+  });
+
+  res.json({
+    email: req.emailVerificado.email,
+    cliente: clientePublico(cliente),
+  });
 });
 
 export const listar = executarAssincrono(async (req, res) => {
@@ -57,16 +65,16 @@ export const listar = executarAssincrono(async (req, res) => {
 
 export const buscarPorId = executarAssincrono(async (req, res) => {
   const cliente = await Cliente.findByPk(validarId(req.params.id, "Cliente"));
-  if (!cliente) throw new ErroDaAplicacao("Cliente não encontrado.", 404);
+  if (!cliente) throw new ErroDaAplicacao("Cliente nao encontrado.", 404);
   res.json({ cliente });
 });
 
 export const atualizar = executarAssincrono(async (req, res) => {
   const cliente = await Cliente.findByPk(validarId(req.params.id, "Cliente"));
-  if (!cliente) throw new ErroDaAplicacao("Cliente não encontrado.", 404);
+  if (!cliente) throw new ErroDaAplicacao("Cliente nao encontrado.", 404);
   const dados = dadosDoCliente(req.body);
   const duplicado = await Cliente.findOne({ where: { email: dados.email, id: { [Op.ne]: cliente.id } } });
-  if (duplicado) throw new ErroDaAplicacao("Já existe um cliente com esse e-mail.", 409);
+  if (duplicado) throw new ErroDaAplicacao("Ja existe um cliente com esse e-mail.", 409);
 
   await cliente.update(dados);
   await registrarLog({
@@ -81,7 +89,7 @@ export const atualizar = executarAssincrono(async (req, res) => {
 
 export const alterarStatus = executarAssincrono(async (req, res) => {
   const cliente = await Cliente.findByPk(validarId(req.params.id, "Cliente"));
-  if (!cliente) throw new ErroDaAplicacao("Cliente não encontrado.", 404);
+  if (!cliente) throw new ErroDaAplicacao("Cliente nao encontrado.", 404);
   await cliente.update({ status: validarStatus(req.body.status, ["ativo", "inativo"]) });
   await registrarLog({
     adminId: req.admin.id,

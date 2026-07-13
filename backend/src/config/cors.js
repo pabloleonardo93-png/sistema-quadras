@@ -47,6 +47,7 @@ export function origemEstaPermitida({ origem, host, permitidas = origensPermitid
 
 export function criarCorsOptions(req) {
   return {
+    credentials: true,
     origin(origem, callback) {
       if (origemEstaPermitida({ origem, host: req.get("host") })) {
         return callback(null, true);

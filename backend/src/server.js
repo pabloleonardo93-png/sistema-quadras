@@ -1,6 +1,7 @@
 import "./config/env.js";
 import app from "./app.js";
 import sequelize from "./config/database.js";
+import { iniciarExpiradorReservasPendentes } from "./services/expiracaoReservaService.js";
 
 const porta = Number(process.env.PORT || 3000);
 
@@ -10,6 +11,7 @@ async function iniciarServidor() {
       throw new Error("JWT_SECRET não foi configurada.");
     }
     await sequelize.authenticate();
+    iniciarExpiradorReservasPendentes();
     app.listen(porta, () => {
       console.log("API disponível em http://localhost:" + porta);
     });

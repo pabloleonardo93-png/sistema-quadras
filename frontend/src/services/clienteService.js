@@ -1,7 +1,22 @@
 import api from "../api/api";
+import { obterTokenVerificacaoEmail } from "./emailVerificationService";
+
+function headersDeVerificacaoEmail() {
+  const token = obterTokenVerificacaoEmail();
+  return token ? { "X-Email-Verification-Token": token } : {};
+}
+
+export async function buscarMeuCliente() {
+  const response = await api.get("/clientes/me", undefined, {
+    headers: headersDeVerificacaoEmail(),
+  });
+  return response.cliente || null;
+}
 
 export async function criarCliente(dados) {
-  const response = await api.post("/clientes", dados);
+  const response = await api.post("/clientes", dados, {
+    headers: headersDeVerificacaoEmail(),
+  });
   return response;
 }
 

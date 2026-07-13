@@ -53,7 +53,7 @@ npm install
 
 Use o arquivo **.env** da raiz do projeto. O backend carrega esse arquivo mesmo quando você roda comandos dentro da pasta `backend`.
 
-Configure nele as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR**, **UPLOAD_MAX_SIZE**, **APP_PUBLIC_URL**, **API_PUBLIC_URL**, **MERCADO_PAGO_ACCESS_TOKEN**, **MERCADO_PAGO_WEBHOOK_URL** e **MERCADO_PAGO_WEBHOOK_SECRET**.
+Configure nele as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR**, **UPLOAD_MAX_SIZE**, **APP_PUBLIC_URL**, **API_PUBLIC_URL**, **MERCADO_PAGO_ACCESS_TOKEN**, **MERCADO_PAGO_WEBHOOK_URL**, **MERCADO_PAGO_WEBHOOK_SECRET**, **RESEND_API_KEY** e **RESEND_FROM_EMAIL**.
 
 Defina com atenção:
 
@@ -62,6 +62,16 @@ Defina com atenção:
 - **ADMIN_SEED_PASSWORD** para a senha do administrador local.
 
 O arquivo **.env** da raiz é ignorado pelo Git. Nunca envie credenciais reais ao repositório.
+
+Para validar e-mail em producao com Resend, configure:
+
+~~~env
+RESEND_API_KEY=sua_chave_do_resend
+RESEND_FROM_EMAIL="Pe na Areia <reservas@seudominio.com>"
+EMAIL_VERIFICATION_PROVIDER=resend
+~~~
+
+O remetente de **RESEND_FROM_EMAIL** precisa pertencer a um dominio/remetente verificado no painel do Resend. Para teste local sem envio real, use **EMAIL_VERIFICATION_PROVIDER=mock**; nesse modo o codigo aparece no log do backend.
 
 ## Banco de dados
 
@@ -163,6 +173,32 @@ A senha nunca é retornada pela API.
 }
 ~~~
 
+### Verificacao de e-mail da reserva
+
+- **POST /api/verificacao-email/enviar**: envia um codigo de 6 digitos para o e-mail informado;
+- **POST /api/verificacao-email/confirmar**: valida o codigo e retorna um JWT temporario da verificacao.
+
+~~~json
+{
+  "email": "cliente@teste.com"
+}
+~~~
+
+~~~json
+{
+  "email": "cliente@teste.com",
+  "codigo": "123456"
+}
+~~~
+
+O codigo vale por 10 minutos, tem limite de tentativas e fica salvo apenas como hash. O JWT temporario deve ser enviado nas rotas que criam reserva pelo header:
+
+~~~text
+X-Email-Verification-Token: TOKEN_DA_VERIFICACAO
+~~~
+
+O backend usa o e-mail de dentro desse token para criar ou atualizar o cliente da reserva. A chave **RESEND_API_KEY** fica somente no backend.
+
 ### Quadras
 
 - **GET /api/quadras**: público, somente ativas;
@@ -208,7 +244,7 @@ A senha nunca é retornada pela API.
 
 ### Reservas
 
-- **POST /api/reservas**: público;
+- **POST /api/reservas**: público, exige JWT temporario de e-mail validado;
 - **POST /api/reservas/:id/pagamento**: público, cria checkout do Mercado Pago com o valor da reserva;
 - **GET /api/reservas/:id/status**: público, retorna status resumido da reserva e do pagamento;
 - **GET /api/reservas**: administrador;
@@ -232,7 +268,8 @@ A API bloqueia uma segunda reserva para a mesma quadra, data e hora com HTTP 409
 ### Pagamentos
 
 - **POST /api/reservas/:id/pagamento**: cria uma preferência do Mercado Pago para a reserva informada;
-- **POST /api/pagamentos/mercadopago/criar**: cria reserva e checkout em um fluxo único;
+- **POST /api/pagamentos/mercadopago/criar**: cria reserva e checkout em um fluxo unico, exige JWT temporario de e-mail validado;
+- **POST /api/pagamentos/mercadopago/pix/criar**: cria reserva e pagamento Pix direto pela API do Mercado Pago, retornando QR Code, Pix Copia e Cola e prazo de pagamento;
 - **POST /api/webhooks/mercadopago**: recebe notificações do Mercado Pago e atualiza a reserva;
 - **POST /api/pagamentos/mercadopago/webhook** e **POST /api/pagamentos/mercado-pago/webhook**: aliases mantidos por compatibilidade.
 
@@ -261,7 +298,7 @@ Status de pagamentos:
 - `cancelado`;
 - `estornado`.
 
-Cada reserva possui `valorTotal`, `pagamentoStatus`, `mercadoPagoPreferenceId`, `mercadoPagoPaymentId`, `pagamentoUrl`, `pagamentoCriadoEm` e `pagoEm`. Quando o Mercado Pago retorna pagamento aprovado, a reserva passa para **confirmada** e o pagamento para **aprovado**. Se o pagamento for cancelado, recusado, estornado ou expirar, a reserva é cancelada ou expirada e o horário volta a ficar disponível.
+Cada reserva possui `valorTotal`, `pagamentoStatus`, `mercadoPagoPreferenceId`, `mercadoPagoPaymentId`, `pagamentoUrl`, `pagamentoCriadoEm` e `pagoEm`. Para Pix direto, o backend define `date_of_expiration` com o mesmo prazo configurado em `RESERVA_PAGAMENTO_TEMPO_MINUTOS`. Quando o Mercado Pago retorna pagamento aprovado, a reserva passa para **confirmada** e o pagamento para **aprovado**. Se o pagamento for cancelado, recusado, estornado ou expirar, a reserva é cancelada ou expirada e o horário volta a ficar disponível.
 
 ### Comunicados
 

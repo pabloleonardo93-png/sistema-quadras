@@ -1,4 +1,5 @@
 import Reserva from "../models/Reserva.js";
+import { anexarExpiracaoPagamento } from "../services/mercadoPagoService.js";
 import { alterarStatusDaReserva, criarReserva, inclusoesReserva } from "../services/reservaService.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
@@ -11,6 +12,7 @@ export const criar = executarAssincrono(async (req, res) => {
     modalidadeId: req.body.modalidadeId,
     horarioId: req.body.horarioId,
     observacoes: req.body.observacoes,
+    emailVerificado: req.emailVerificado,
     enderecoIp: req.ip,
   });
   res.status(201).json({ mensagem: "Reserva criada com sucesso.", reserva });
@@ -53,6 +55,7 @@ export const statusPublico = executarAssincrono(async (req, res) => {
       horaFim: reserva.horaFim,
       quadra: reserva.quadra ? { id: reserva.quadra.id, nome: reserva.quadra.nome } : null,
       modalidade: reserva.modalidade ? { id: reserva.modalidade.id, nome: reserva.modalidade.nome } : null,
+      ...anexarExpiracaoPagamento(reserva),
     },
   });
 });

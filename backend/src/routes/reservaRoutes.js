@@ -2,9 +2,10 @@ import { Router } from "express";
 import { criarCheckoutReserva } from "../controllers/pagamentoController.js";
 import * as controller from "../controllers/reservaController.js";
 import { autenticarAdministrador } from "../middlewares/authMiddleware.js";
+import { validarEmailVerificado } from "../middlewares/validarEmailVerificado.js";
 
 const router = Router();
-router.post("/", controller.criar);
+router.post("/", validarEmailVerificado, controller.criar);
 router.post("/:id/pagamento", criarCheckoutReserva);
 router.get("/:id/status", controller.statusPublico);
 router.use(autenticarAdministrador);

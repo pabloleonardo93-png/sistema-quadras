@@ -20,22 +20,29 @@ const paymentText = {
   estornado: "Pagamento estornado",
 };
 
-function visualState(status, paymentStatus) {
-  if (status === "confirmada" || paymentStatus === "aprovado") {
-    return {
-      icon: CheckCircle2,
-      title: "Pagamento recebido.",
-      text: "Sua reserva foi confirmada. A equipe ja consegue acompanhar tudo pelo painel administrativo.",
-      tone: "success",
-    };
-  }
+function formatRemainingTime(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
 
+function visualState(status, paymentStatus) {
   if (status === "cancelada" || status === "expirada" || ["recusado", "cancelado", "estornado"].includes(paymentStatus)) {
     return {
       icon: AlertCircle,
       title: "Pagamento nao confirmado.",
       text: "A reserva nao foi confirmada. Escolha outro horario ou fale com a equipe para ajustar.",
       tone: "danger",
+    };
+  }
+
+  if (status === "confirmada" || paymentStatus === "aprovado") {
+    return {
+      icon: CheckCircle2,
+      title: "Pagamento recebido.",
+      text: "Sua reserva foi confirmada. A equipe ja consegue acompanhar tudo pelo painel administrativo.",
+      tone: "success",
     };
   }
 
@@ -53,6 +60,7 @@ export default function PagamentoRetorno() {
   const [reserva, setReserva] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(Boolean(reservaId));
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
@@ -83,11 +91,24 @@ export default function PagamentoRetorno() {
     };
   }, [reservaId]);
 
+  useEffect(() => {
+    if (!reserva?.pagamentoExpiraEm || reserva.status !== "aguardando_pagamento") {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [reserva?.pagamentoExpiraEm, reserva?.status]);
+
   const state = useMemo(
     () => visualState(reserva?.status, reserva?.pagamentoStatus),
     [reserva?.status, reserva?.pagamentoStatus],
   );
   const Icon = state.icon;
+  const restanteMs = reserva?.pagamentoExpiraEm
+    ? new Date(reserva.pagamentoExpiraEm).getTime() - now
+    : 0;
+  const deveMostrarPrazo = reserva?.status === "aguardando_pagamento" && reserva?.pagamentoExpiraEm;
 
   return (
     <main className="payment-return">
@@ -123,6 +144,11 @@ export default function PagamentoRetorno() {
                 {statusText[reserva?.status] || reserva?.status} /{" "}
                 {paymentText[reserva?.pagamentoStatus] || reserva?.pagamentoStatus}
               </small>
+              {deveMostrarPrazo && (
+                <em>
+                  Prazo para pagamento: {formatRemainingTime(restanteMs)}
+                </em>
+              )}
             </div>
           </>
         )}
