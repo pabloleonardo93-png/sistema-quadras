@@ -53,7 +53,7 @@ npm install
 
 Use o arquivo **.env** da raiz do projeto. O backend carrega esse arquivo mesmo quando você roda comandos dentro da pasta `backend`.
 
-Configure nele as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR**, **UPLOAD_MAX_SIZE**, **APP_PUBLIC_URL**, **API_PUBLIC_URL**, **MERCADO_PAGO_ACCESS_TOKEN**, **MERCADO_PAGO_WEBHOOK_URL**, **MERCADO_PAGO_WEBHOOK_SECRET**, **RESEND_API_KEY** e **RESEND_FROM_EMAIL**.
+Configure nele as variáveis **NODE_ENV**, **PORT**, **CORS_ORIGIN**, **DB_HOST**, **DB_PORT**, **DB_NAME**, **DB_USER**, **DB_PASSWORD**, **POSTGRES_DB**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_PORT**, **JWT_SECRET**, **JWT_EXPIRES_IN**, **ADMIN_SEED_NAME**, **ADMIN_SEED_EMAIL**, **ADMIN_SEED_PASSWORD**, **UPLOAD_DIR**, **UPLOAD_MAX_SIZE**, **APP_PUBLIC_URL**, **API_PUBLIC_URL**, **MERCADO_PAGO_ACCESS_TOKEN**, **MERCADO_PAGO_WEBHOOK_URL**, **MERCADO_PAGO_WEBHOOK_SECRET**, **RESEND_API_KEY**, **RESEND_TEMPLATE_VERIFICACAO_ID** e **EMAIL_FROM**.
 
 Defina com atenção:
 
@@ -67,11 +67,13 @@ Para validar e-mail em producao com Resend, configure:
 
 ~~~env
 RESEND_API_KEY=sua_chave_do_resend
-RESEND_FROM_EMAIL="Pe na Areia <reservas@seudominio.com>"
+RESEND_TEMPLATE_VERIFICACAO_ID=id_do_template_publicado
+EMAIL_FROM="Pe na Areia <reservas@seudominio.com>"
 EMAIL_VERIFICATION_PROVIDER=resend
+CODIGO_VERIFICACAO_EXPIRACAO_MINUTOS=10
 ~~~
 
-O remetente de **RESEND_FROM_EMAIL** precisa pertencer a um dominio/remetente verificado no painel do Resend. Para teste local sem envio real, use **EMAIL_VERIFICATION_PROVIDER=mock**; nesse modo o codigo aparece no log do backend.
+O remetente de **EMAIL_FROM** precisa pertencer a um dominio/remetente verificado no painel do Resend. O backend envia a variavel **codigo** para o template publicado. Para teste local sem envio real, use **EMAIL_VERIFICATION_PROVIDER=mock**.
 
 ## Banco de dados
 

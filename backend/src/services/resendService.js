@@ -1,56 +1,86 @@
-import { resendFromEmail } from "../config/verificacaoEmail.js";
+import { Resend } from "resend";
+import {
+  resendFromEmail,
+  resendTemplateVerificacaoId,
+} from "../config/verificacaoEmail.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 
-const API_RESEND_EMAILS = "https://api.resend.com/emails";
+let clienteResend = null;
+let apiKeyCliente = "";
 
-function montarEmailHtml({ codigo, validadeMinutos }) {
-  return `
-    <div style="font-family: Arial, sans-serif; color: #15201e; line-height: 1.5;">
-      <h1 style="font-size: 22px;">Codigo de verificacao</h1>
-      <p>Use o codigo abaixo para continuar sua reserva no Pe na Areia.</p>
-      <p style="font-size: 32px; font-weight: 700; letter-spacing: 6px;">${codigo}</p>
-      <p>Ele e valido por ${validadeMinutos} minutos.</p>
-    </div>
-  `;
+function campoObrigatorio(nome, valor) {
+  if (typeof valor !== "string" || valor.trim() === "") {
+    throw new ErroDaAplicacao(`${nome} nao configurado.`, 503);
+  }
+
+  return valor.trim();
 }
 
-export async function enviarCodigoPorResend({ email, codigo, validadeMinutos }) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new ErroDaAplicacao("Resend nao configurado. Defina RESEND_API_KEY no backend.", 503);
+export function validarConfiguracaoResend({
+  apiKey = process.env.RESEND_API_KEY,
+  remetente = resendFromEmail,
+  templateId = resendTemplateVerificacaoId,
+} = {}) {
+  return {
+    apiKey: campoObrigatorio("RESEND_API_KEY", apiKey),
+    remetente: campoObrigatorio("EMAIL_FROM ou RESEND_FROM_EMAIL", remetente),
+    templateId: campoObrigatorio("RESEND_TEMPLATE_VERIFICACAO_ID", templateId),
+  };
+}
+
+function obterClienteResend(apiKey) {
+  if (!clienteResend || apiKeyCliente !== apiKey) {
+    clienteResend = new Resend(apiKey);
+    apiKeyCliente = apiKey;
   }
 
-  if (!resendFromEmail) {
-    throw new ErroDaAplicacao("Defina RESEND_FROM_EMAIL com um remetente verificado no Resend.", 503);
+  return clienteResend;
+}
+
+export function montarPayloadTemplateVerificacao({
+  email,
+  codigo,
+  remetente,
+  templateId,
+}) {
+  const codigoTexto = String(codigo ?? "").trim();
+  if (!email || !codigoTexto) {
+    throw new ErroDaAplicacao("E-mail e codigo sao obrigatorios.", 400);
   }
 
-  const resposta = await fetch(API_RESEND_EMAILS, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
+  return {
+    from: remetente,
+    to: [email],
+    template: {
+      id: templateId,
+      variables: {
+        codigo: codigoTexto,
+      },
     },
-    body: JSON.stringify({
-      from: resendFromEmail,
-      to: [email],
-      subject: "Codigo para continuar sua reserva",
-      html: montarEmailHtml({ codigo, validadeMinutos }),
-      text: `Seu codigo de verificacao e ${codigo}. Ele e valido por ${validadeMinutos} minutos.`,
-    }),
+  };
+}
+
+export function tratarResultadoResend(resultado) {
+  if (resultado?.error) {
+    throw new ErroDaAplicacao(
+      "Nao foi possivel enviar o codigo de verificacao.",
+      503,
+    );
+  }
+
+  return resultado?.data || resultado;
+}
+
+export async function enviarCodigoPorResend({ email, codigo }) {
+  const configuracao = validarConfiguracaoResend();
+  const cliente = obterClienteResend(configuracao.apiKey);
+  const payload = montarPayloadTemplateVerificacao({
+    email,
+    codigo: String(codigo),
+    remetente: configuracao.remetente,
+    templateId: configuracao.templateId,
   });
 
-  const texto = await resposta.text();
-  let dados = null;
-  if (texto) {
-    try {
-      dados = JSON.parse(texto);
-    } catch {
-      dados = { message: texto };
-    }
-  }
-
-  if (!resposta.ok) {
-    throw new ErroDaAplicacao(dados?.message || "Nao foi possivel enviar o codigo por e-mail.", 503);
-  }
-
-  return dados;
+  const resultado = await cliente.emails.send(payload);
+  return tratarResultadoResend(resultado);
 }

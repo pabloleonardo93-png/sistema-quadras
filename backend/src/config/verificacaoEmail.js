@@ -12,7 +12,8 @@ function numeroPositivo(valor, fallback) {
 }
 
 export const codigoEmailValidadeMinutos = numeroPositivo(
-  process.env.EMAIL_VERIFICATION_CODE_TTL_MINUTES,
+  process.env.CODIGO_VERIFICACAO_EXPIRACAO_MINUTOS ||
+    process.env.EMAIL_VERIFICATION_CODE_TTL_MINUTES,
   MINUTOS_PADRAO_CODIGO,
 );
 
@@ -56,7 +57,8 @@ export const provedorVerificacaoEmail = (
   (process.env.RESEND_API_KEY ? "resend" : "mock")
 ).toLowerCase();
 
-export const resendFromEmail = process.env.RESEND_FROM_EMAIL || "";
+export const resendFromEmail = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || "";
+export const resendTemplateVerificacaoId = process.env.RESEND_TEMPLATE_VERIFICACAO_ID || "";
 export const emailVerificacaoCookieNome =
   process.env.EMAIL_VERIFICATION_COOKIE_NAME || "email_verification_token";
 export const emailVerificacaoCookieMaxAgeMs = tokenEmailValidadeMinutos * 60_000;

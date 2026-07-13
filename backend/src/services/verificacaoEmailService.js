@@ -45,7 +45,7 @@ function compararHash(valor, hashEsperado) {
   return atual.length === esperado.length && crypto.timingSafeEqual(atual, esperado);
 }
 
-function gerarCodigo() {
+export function gerarCodigoVerificacao() {
   return String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
@@ -62,7 +62,7 @@ function limitarUserAgent(userAgent) {
 
 async function enviarEmailCodigo({ email, codigo }) {
   if (provedorVerificacaoEmail === "mock") {
-    console.info(`[email-verification:mock] ${email} -> ${codigo}`);
+    console.info(`[email-verification:mock] codigo gerado para ${email}`);
     return { provider: "mock" };
   }
 
@@ -120,7 +120,7 @@ export async function solicitarCodigoEmail({ email, enderecoIp, userAgent }) {
   const agora = new Date();
   const expiraEm = calcularExpiracaoCodigoEmail(agora);
   const reenvioLiberadoEm = calcularLiberacaoReenvioEmail(agora);
-  const codigo = gerarCodigo();
+  const codigo = gerarCodigoVerificacao();
 
   await VerificacaoEmail.update(
     { status: "expirado" },
@@ -134,6 +134,16 @@ export async function solicitarCodigoEmail({ email, enderecoIp, userAgent }) {
   );
 
   await verificarLimitesDeEnvio({ email: emailNormalizado, enderecoIp, agora });
+
+  await VerificacaoEmail.update(
+    { status: "expirado" },
+    {
+      where: {
+        email: emailNormalizado,
+        status: "pendente",
+      },
+    },
+  );
 
   const verificacao = await VerificacaoEmail.create({
     email: emailNormalizado,
