@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Menu, X } from "lucide-react";
 import { brand } from "../constants/brand";
-import { BrandMark } from "./BrandMark";
 
 const links = [
   { label: "Modalidades", href: "#modalidades" },
@@ -27,13 +26,12 @@ export function Header() {
 
   return (
     <header className={`site-header ${scrolled ? "site-header--scrolled" : ""}`}>
-      <a className="brand" href="#inicio" aria-label={`${brand.name}, início`}>
-        <span className="brand__mark">
-          <BrandMark title={brand.name} />
-        </span>
-        <span className="brand__name">
-          PÉ NA <strong>AREIA</strong>
-        </span>
+      <a className="brand brand--image" href="#inicio" aria-label={`${brand.name}, início`}>
+        <img
+          className="brand__logo-image"
+          src="/images/logo/logo-pe-na-areia-header-legivel.png"
+          alt={brand.name}
+        />
       </a>
 
       <nav

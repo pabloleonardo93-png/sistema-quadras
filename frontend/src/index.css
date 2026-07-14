@@ -442,14 +442,15 @@ img {
 .site-header {
   position: fixed;
   z-index: 50;
-  top: 16px;
+  top: 10px;
   left: 50%;
-  display: flex;
+  display: grid;
   width: min(1180px, calc(100% - 32px));
-  min-height: 68px;
+  min-height: 60px;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px 8px 18px;
+  column-gap: clamp(24px, 3vw, 46px);
+  grid-template-columns: minmax(230px, 270px) minmax(0, 1fr) auto;
+  padding: 4px 10px 4px 18px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
@@ -488,6 +489,22 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+
+.brand--image {
+  justify-self: start;
+  width: clamp(224px, 19vw, 258px);
+  height: 50px;
+  flex: 0 0 auto;
+  gap: 0;
+}
+
+.brand__logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.34));
 }
 
 .brand__mark {
@@ -555,7 +572,9 @@ img {
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 22px;
+  justify-self: center;
+  gap: clamp(18px, 2.1vw, 28px);
+  min-width: 0;
 }
 
 .site-nav > a {
@@ -589,6 +608,7 @@ img {
 }
 
 .site-header__cta {
+  justify-self: end;
   min-height: 48px;
   padding-inline: 20px;
   background: var(--green-700);
@@ -1860,6 +1880,11 @@ a.reservation-action {
 
 .reservation-page__header .brand {
   color: var(--white);
+}
+
+.reservation-page__header .brand--image {
+  width: clamp(224px, 19vw, 258px);
+  height: 50px;
 }
 
 .reservation-page__header .brand__mark {
@@ -3328,7 +3353,39 @@ a.reservation-action {
   color: var(--ink);
 }
 
+@media (max-width: 1120px) {
+  .site-header {
+    column-gap: 18px;
+    grid-template-columns: minmax(204px, 228px) minmax(0, 1fr) auto;
+    padding-left: 14px;
+  }
+
+  .brand--image {
+    width: 216px;
+    height: 46px;
+  }
+
+  .site-nav {
+    gap: 16px;
+  }
+
+  .site-nav > a {
+    font-size: 0.8rem;
+  }
+
+  .site-header__cta {
+    min-height: 46px;
+    padding-inline: 16px;
+  }
+}
+
 @media (max-width: 980px) {
+  .site-header {
+    column-gap: 16px;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+  }
+
   .site-nav {
     position: fixed;
     top: 78px;
@@ -3516,15 +3573,21 @@ a.reservation-action {
   }
 
   .site-header {
-    top: 10px;
+    top: 8px;
     width: calc(100% - 20px);
-    min-height: 60px;
-    padding: 6px 6px 6px 12px;
+    min-height: 56px;
+    padding: 5px 6px 5px 12px;
   }
 
   .brand__mark {
     width: 38px;
     height: 38px;
+  }
+
+  .brand--image,
+  .reservation-page__header .brand--image {
+    width: 164px;
+    height: 40px;
   }
 
   .brand__name {

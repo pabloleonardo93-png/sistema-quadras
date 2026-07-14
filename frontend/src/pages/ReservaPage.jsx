@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { BrandMark } from "../components/BrandMark";
 import { Footer } from "../components/Footer";
 import { ReservaRapida } from "../components/ReservaRapida";
 import { brand } from "../constants/brand";
@@ -121,13 +120,12 @@ export default function ReservaPage() {
     <>
       <main className="reservation-page">
         <header className="page-shell reservation-page__header">
-          <a className="brand brand--reservation" href="/#inicio" aria-label={`${brand.name}, início`}>
-            <span className="brand__mark">
-              <BrandMark title={brand.name} />
-            </span>
-            <span className="brand__name">
-              PÉ NA <strong>AREIA</strong>
-            </span>
+          <a className="brand brand--reservation brand--image" href="/#inicio" aria-label={`${brand.name}, início`}>
+            <img
+              className="brand__logo-image"
+              src="/images/logo/logo-pe-na-areia-header-legivel.png"
+              alt={brand.name}
+            />
           </a>
           <a className="reservation-page__back" href="/#quadras">
             <ArrowLeft aria-hidden="true" size={18} />
