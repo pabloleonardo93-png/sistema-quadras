@@ -3,6 +3,7 @@ import * as controller from "../controllers/quadraController.js";
 import { autenticarAdministrador } from "../middlewares/authMiddleware.js";
 
 const router = Router();
+router.get("/admin/todas", autenticarAdministrador, controller.listarAdmin);
 router.get("/", controller.listar);
 router.get("/:id", controller.buscarPorId);
 router.post("/", autenticarAdministrador, controller.criar);

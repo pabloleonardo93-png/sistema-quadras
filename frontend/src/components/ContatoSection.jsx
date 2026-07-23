@@ -3,18 +3,20 @@ import {
   Clock3,
   MapPin,
   MessageCircle,
-  Navigation,
   Phone,
 } from "lucide-react";
 import { arenaInfo } from "../constants/arenaInfo";
-import { brand } from "../constants/brand";
 import { Button } from "./Button";
 
 export function ContatoSection() {
+  const mapsQuery = `${arenaInfo.address}, ${arenaInfo.city}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
+  const mapsEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery)}&output=embed`;
+
   return (
-    <section className="contact section" id="contato">
+    <section className="contact section" id="contato" data-scroll-fade-section>
       <div className="page-shell contact__layout">
-        <div className="contact__content">
+        <div className="contact__content" data-scroll-fade>
           <span className="contact__eyebrow">Chegue junto</span>
           <h2>A AREIA ESTÁ TE ESPERANDO.</h2>
           <p>
@@ -59,29 +61,23 @@ export function ContatoSection() {
           </a>
         </div>
 
-        <div className="map-card" aria-label="Mapa ilustrativo da localização">
-          <div className="map-card__grid" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="map-card__route" aria-hidden="true" />
-          <div className="map-card__pin">
-            <span>
-              <Navigation aria-hidden="true" size={23} fill="currentColor" />
-            </span>
-            <strong>{brand.name}</strong>
-            <small>Você chegou.</small>
-          </div>
+        <div
+          className="map-card"
+          aria-label="Mapa da localização"
+          data-scroll-fade
+        >
+          <iframe
+            className="map-card__embed"
+            title={`Mapa de ${mapsQuery}`}
+            src={mapsEmbedUrl}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
           <Button
             variant="dark"
             onClick={() =>
               window.open(
-                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  `${arenaInfo.address}, ${arenaInfo.city}`,
-                )}`,
+                mapsUrl,
                 "_blank",
                 "noopener,noreferrer",
               )

@@ -1,6 +1,26 @@
+import { useEffect, useState } from "react";
 import { Coffee, Droplets, Lightbulb, UsersRound } from "lucide-react";
 import { brand } from "../constants/brand";
 import { SectionHeading } from "./SectionHeading";
+
+const gallerySlides = [
+  {
+    src: "/images/experiencia/beach-tennis-em-acao.jpg?v=20260718-2",
+    alt: "Jogadora preparando um saque de beach tennis na quadra do Pé na Areia",
+    category: "Beach Tennis",
+    caption: "Precisão, energia e areia.",
+    modifier: "beach",
+  },
+  {
+    src: "/images/experiencia/futevolei-em-acao.jpg?v=20260718-2",
+    alt: "Atleta saltando para disputar a bola em uma partida de futevôlei",
+    category: "Futevôlei",
+    caption: "Jogo no alto, arena completa.",
+    modifier: "futevolei",
+  },
+];
+
+const galleryInterval = 3000;
 
 const features = [
   {
@@ -25,47 +45,88 @@ const features = [
   },
 ];
 
-const metrics = [
-  { value: "08h", label: "abertura" },
-  { value: "22h", label: "fechamento" },
-  { value: "100%", label: "agenda online" },
-];
-
 export function SobreArena() {
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return undefined;
+
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % gallerySlides.length);
+    }, galleryInterval);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const advanceOnHover = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setActiveSlide((current) => (current + 1) % gallerySlides.length);
+  };
+
   return (
-    <section className="section about" id="sobre">
+    <section className="section about" id="sobre" data-scroll-fade-section>
       <div className="page-shell about__layout">
-        <div className="about__visual">
+        <div
+          className="about__visual"
+          role="region"
+          aria-roledescription="carrossel"
+          aria-label="Esportes e experiências no Pé na Areia"
+          onMouseEnter={advanceOnHover}
+          data-scroll-fade
+        >
           <div className="about__image">
-            <img
-              src="https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=1400&q=85"
-              alt="Partida de vôlei em uma quadra esportiva"
-            />
-          </div>
-          <div className="about__stamp" aria-label="Aberto de terça a domingo">
-            <strong>6/7</strong>
-            <span>terça a domingo</span>
+            {gallerySlides.map((slide, index) => (
+              <figure
+                className={`about__slide about__slide--${slide.modifier} ${
+                  index === activeSlide ? "is-active" : ""
+                }`}
+                aria-hidden={index !== activeSlide}
+                key={slide.src}
+              >
+                <img
+                  src={slide.src}
+                  alt={index === activeSlide ? slide.alt : ""}
+                  loading="eager"
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  decoding="async"
+                />
+              </figure>
+            ))}
+
+            <span className="about__gallery-kicker">Pé na Areia / Em movimento</span>
+
+            <div className="about__gallery-caption" aria-hidden="true">
+              <span>{gallerySlides[activeSlide].category}</span>
+              <strong>{gallerySlides[activeSlide].caption}</strong>
+            </div>
+
           </div>
         </div>
 
         <div className="about__content">
-          <SectionHeading
+          <div data-scroll-fade>
+            <SectionHeading
             eyebrow="Sobre o espaço"
-            title="ESPAÇO PRONTO PARA O SEU MELHOR JOGO."
+            title={
+              <>
+                ESPAÇO PRONTO PARA O SEU <span>MELHOR JOGO.</span>
+              </>
+            }
             description={`O ${brand.name} aproxima esporte, sol e bons encontros. A experiência foi pensada para você escolher o horário, chegar com tranquilidade e aproveitar a partida.`}
-          />
-          <div className="about__metrics" aria-label="Resumo da estrutura">
-            {metrics.map((metric) => (
-              <span key={metric.label}>
-                <strong>{metric.value}</strong>
-                {metric.label}
-              </span>
-            ))}
+            />
           </div>
-          <div className="about__features">
+
+          <div
+            className="about__features"
+            aria-label="Diferenciais da estrutura"
+            data-scroll-fade
+          >
             {features.map(({ icon: Icon, title, description }) => (
               <article key={title}>
-                <Icon aria-hidden="true" size={24} strokeWidth={1.8} />
+                <span className="about__feature-icon">
+                  <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
+                </span>
                 <div>
                   <h3>{title}</h3>
                   <p>{description}</p>

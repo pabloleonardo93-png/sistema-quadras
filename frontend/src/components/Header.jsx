@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { brand } from "../constants/brand";
 
 const links = [
-  { label: "Modalidades", href: "#modalidades" },
   { label: "Quadras", href: "#quadras" },
-  { label: "Reservas", href: "#quadras" },
-  { label: "O espaço", href: "#sobre" },
+  { label: "Reservas", href: "#quadras-disponiveis" },
+  { label: "Espaço", href: "#sobre" },
   { label: "Eventos", href: "#eventos" },
   { label: "Contato", href: "#contato" },
 ];
@@ -45,7 +44,7 @@ export function Header() {
         ))}
         <a
           className="button button--primary site-nav__mobile-cta"
-          href="#quadras"
+          href="#quadras-disponiveis"
           onClick={closeMenu}
         >
           <span>Reservar agora</span>
@@ -54,9 +53,8 @@ export function Header() {
 
       <a
         className="button button--primary site-header__cta"
-        href="#quadras"
+        href="#quadras-disponiveis"
       >
-        <CalendarDays aria-hidden="true" size={18} />
         <span>Reservar quadra</span>
       </a>
 

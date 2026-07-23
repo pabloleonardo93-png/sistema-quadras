@@ -1,4 +1,6 @@
+import crypto from "node:crypto";
 import { fn, col, Op, literal } from "sequelize";
+import AcessoPagina from "../models/AcessoPagina.js";
 import Cliente from "../models/Cliente.js";
 import Horario from "../models/Horario.js";
 import Modalidade from "../models/Modalidade.js";
@@ -13,6 +15,38 @@ function formatarData(data) {
   const dia = String(data.getDate()).padStart(2, "0");
   return ano + "-" + mes + "-" + dia;
 }
+
+const PAGINA_RESERVA_QUADRAS = "reserva_quadras";
+
+function limitarTexto(valor, tamanho) {
+  const texto = typeof valor === "string" ? valor.trim() : "";
+  return texto ? texto.slice(0, tamanho) : null;
+}
+
+function visitanteFallback(req) {
+  const userAgent = req.get("user-agent") || "";
+  return crypto
+    .createHash("sha256")
+    .update(`${req.ip || ""}:${userAgent}`)
+    .digest("hex")
+    .slice(0, 64);
+}
+
+export const registrarAcesso = executarAssincrono(async (req, res) => {
+  const pagina = limitarTexto(req.body?.pagina, 80) || PAGINA_RESERVA_QUADRAS;
+  const visitanteId = limitarTexto(req.body?.visitanteId, 120) || visitanteFallback(req);
+
+  await AcessoPagina.create({
+    pagina,
+    visitanteId,
+    caminho: limitarTexto(req.body?.caminho, 300),
+    origem: limitarTexto(req.body?.origem || req.get("referer"), 500),
+    userAgent: limitarTexto(req.get("user-agent"), 500),
+    enderecoIp: limitarTexto(req.ip, 80),
+  });
+
+  res.status(201).json({ mensagem: "Acesso registrado." });
+});
 
 export const dashboard = executarAssincrono(async (_req, res) => {
   const hoje = hojeLocal();
@@ -61,15 +95,30 @@ export const reservas = executarAssincrono(async (req, res) => {
   if (req.query.inicio && req.query.fim) {
     where.data = { [Op.between]: [validarData(req.query.inicio), validarData(req.query.fim)] };
   }
-  const agrupadasPorStatus = await Reserva.findAll({
-    where,
-    attributes: ["status", [fn("COUNT", col("id")), "total"]],
-    group: ["status"],
-    order: [["status", "ASC"]],
-    raw: true,
+  const [
+    agrupadasPorStatus,
+    total,
+    pagamentosGerados,
+    pagamentosAprovados,
+  ] = await Promise.all([
+    Reserva.findAll({
+      where,
+      attributes: ["status", [fn("COUNT", col("id")), "total"]],
+      group: ["status"],
+      order: [["status", "ASC"]],
+      raw: true,
+    }),
+    Reserva.count({ where }),
+    Reserva.count({ where: { ...where, pagamentoCriadoEm: { [Op.ne]: null } } }),
+    Reserva.count({ where: { ...where, pagamentoStatus: "aprovado" } }),
+  ]);
+
+  res.json({
+    total,
+    agrupadasPorStatus,
+    pagamentosGerados,
+    pagamentosAprovados,
   });
-  const total = await Reserva.count({ where });
-  res.json({ total, agrupadasPorStatus });
 });
 
 export const ocupacao = executarAssincrono(async (_req, res) => {
@@ -102,4 +151,25 @@ export const modalidades = executarAssincrono(async (_req, res) => {
     raw: true,
   });
   res.json({ modalidades: dados });
+});
+
+export const acessos = executarAssincrono(async (req, res) => {
+  const pagina = limitarTexto(req.query.pagina, 80) || PAGINA_RESERVA_QUADRAS;
+  const where = { pagina };
+  const [totalAcessos, visitantesUnicos, ultimoAcesso] = await Promise.all([
+    AcessoPagina.count({ where }),
+    AcessoPagina.count({ where, distinct: true, col: "visitante_id" }),
+    AcessoPagina.findOne({
+      where,
+      attributes: ["criadoEm"],
+      order: [["criadoEm", "DESC"]],
+    }),
+  ]);
+
+  res.json({
+    pagina,
+    totalAcessos,
+    visitantesUnicos,
+    ultimoAcesso: ultimoAcesso?.criadoEm || null,
+  });
 });

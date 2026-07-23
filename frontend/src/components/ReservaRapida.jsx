@@ -30,6 +30,10 @@ import {
   criarReservaPublicaComPagamento,
   criarReservaPublicaComPix,
 } from "../services/reservaService";
+import {
+  registrarPagamentoGeradoReserva,
+  registrarVisualizacaoPagamentoReserva,
+} from "../services/analyticsService";
 import { Button } from "./Button";
 import { HorariosDisponiveis } from "./HorariosDisponiveis";
 import { SectionHeading } from "./SectionHeading";
@@ -479,7 +483,13 @@ export function ReservaRapida({
     setIsEmailSending(true);
 
     try {
-      const sessao = await buscarSessaoEmail();
+      let sessao = null;
+      try {
+        sessao = await buscarSessaoEmail();
+      } catch {
+        // A consulta de sessao e apenas uma conveniencia; o fluxo por codigo continua.
+      }
+
       const emailInformado = emailVerification.email.trim().toLowerCase();
 
       if (sessao?.verificado && sessao.email === emailInformado) {
@@ -651,6 +661,9 @@ export function ReservaRapida({
 
     setError("");
     setIsPaymentStepOpen(true);
+    registrarVisualizacaoPagamentoReserva(
+      `${window.location.pathname}${window.location.search}#pagamento`,
+    );
   };
 
   const handleCopyPixCode = async () => {
@@ -712,6 +725,9 @@ export function ReservaRapida({
         : await criarReservaPublicaComPagamento(payload);
 
       if (paymentMethod === "pix" && pagamentoResponse.pix) {
+        registrarPagamentoGeradoReserva(
+          `${window.location.pathname}${window.location.search}#pix-gerado`,
+        );
         setCountdownNow(Date.now());
         setCheckoutInfo({
           tipo: "pix",
@@ -724,6 +740,9 @@ export function ReservaRapida({
       }
 
       if (pagamentoResponse.checkoutUrl) {
+        registrarPagamentoGeradoReserva(
+          `${window.location.pathname}${window.location.search}#checkout-gerado`,
+        );
         setCountdownNow(Date.now());
         setCheckoutInfo({
           tipo: "checkout",
@@ -743,9 +762,9 @@ export function ReservaRapida({
       } else if (requestError.status === 409) {
         setError(errorMessage || "Não foi possível continuar com esses dados.");
       } else if (requestError.status === 503) {
-        setError("Pagamento online ainda não configurado. Configure o token do Mercado Pago no backend.");
+        setError("Pagamento online ainda não configurado. Configure o Mercado Pago no sistema.");
       } else {
-        setError(errorMessage || "Erro ao conectar com a API. Tente novamente.");
+        setError(errorMessage || "Erro ao conectar com o sistema. Tente novamente.");
       }
     } finally {
       setIsSubmitting(false);
@@ -767,53 +786,66 @@ export function ReservaRapida({
     <section className="booking section" id="reserva">
       <div className="page-shell">
         <SectionHeading
-          eyebrow="Reserva rápida"
-          title="SEU HORÁRIO EM POUCOS TOQUES."
+          eyebrow="Reserva online"
+          title="RESERVE SUA QUADRA."
+          description="Escolha o jogo, confirme o melhor horário e finalize com pagamento seguro."
           inverse
         />
 
         <div className="booking__layout">
           <aside className="booking-summary">
-            <div className="booking-summary__label">Seu jogo</div>
-            <div className="booking-summary__court">
-              <span>{selectedCourtData?.name || "Escolha a quadra"}</span>
-              <small>{selectedModality || "Escolha a modalidade"}</small>
-            </div>
-            <div className="booking-summary__price">
-              <span>Valor da reserva</span>
-              <strong>R$ {valorFormatado}</strong>
-            </div>
+            <div className="booking-summary__label">Sua reserva</div>
             {selectedCourtData?.image && (
               <div className="booking-summary__photo">
                 <img
                   src={selectedCourtData.image}
                   alt={`Foto da ${selectedCourtData.name}`}
                 />
+                <span className="booking-summary__availability">
+                  <i aria-hidden="true" />
+                  {selectedCourtData.statusLabel}
+                </span>
               </div>
             )}
-            <div className="booking-summary__meta">
-              <span>
-                <CalendarCheck aria-hidden="true" size={18} />
-                {date
-                  ? new Intl.DateTimeFormat("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                    }).format(new Date(`${date}T12:00:00`))
-                  : "--"}
-              </span>
-              <span>
-                <Clock3 aria-hidden="true" size={18} />
-                {selectedHorario?.time || "--:--"}
-              </span>
+            <div className="booking-summary__body">
+              <div className="booking-summary__court">
+                <span>{selectedCourtData?.name || "Escolha a quadra"}</span>
+                <small>{selectedModality || "Escolha a modalidade"}</small>
+              </div>
+              <div className="booking-summary__meta">
+                <span>
+                  <CalendarCheck aria-hidden="true" size={18} />
+                  {date
+                    ? new Intl.DateTimeFormat("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                      }).format(new Date(`${date}T12:00:00`))
+                    : "--"}
+                </span>
+                <span>
+                  <Clock3 aria-hidden="true" size={18} />
+                  {selectedHorario?.time || "--:--"}
+                </span>
+              </div>
+              <div className="booking-summary__location">
+                <MapPin aria-hidden="true" size={18} />
+                <span>
+                  {brand.name}
+                  <small>{arenaInfo.neighborhood}</small>
+                </span>
+              </div>
+              <div className="booking-summary__price">
+                <span>Valor por hora</span>
+                <strong>
+                  <small>R$</small>
+                  {valorFormatado}
+                </strong>
+              </div>
+              <p>
+                <ShieldCheck aria-hidden="true" size={18} />
+                Pix ou cartão em ambiente de pagamento seguro.
+              </p>
             </div>
-            <div className="booking-summary__location">
-              <MapPin aria-hidden="true" size={18} />
-              <span>
-                {brand.name}
-                <small>{arenaInfo.neighborhood}</small>
-              </span>
-            </div>
-            <p>Pagamento online com Pix direto por QR Code ou cartão no checkout seguro.</p>
           </aside>
 
           <div className="booking-panel">
@@ -859,7 +891,7 @@ export function ReservaRapida({
                   <div className="form-section__title">
                     <span>01</span>
                     <div>
-                      <strong>Escolha a partida</strong>
+                      <strong>Defina o seu jogo</strong>
                       <small>Modalidade, quadra e data</small>
                     </div>
                   </div>
@@ -922,8 +954,8 @@ export function ReservaRapida({
                   <div className="form-section__title">
                     <span>02</span>
                     <div>
-                      <strong>Selecione o horário</strong>
-                      <small>Disponibilidade real da API</small>
+                      <strong>Escolha o horário</strong>
+                      <small>Atualizado em tempo real</small>
                     </div>
                   </div>
                   <HorariosDisponiveis

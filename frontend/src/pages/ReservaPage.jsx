@@ -5,6 +5,10 @@ import { Footer } from "../components/Footer";
 import { ReservaRapida } from "../components/ReservaRapida";
 import { brand } from "../constants/brand";
 import { getCourtImage } from "../constants/courtImages";
+import {
+  registrarVisualizacaoDadosReserva,
+  registrarVisualizacaoMarcacaoReserva,
+} from "../services/analyticsService";
 import { listarModalidades } from "../services/modalidadeService";
 import { listarQuadras } from "../services/quadraService";
 
@@ -74,6 +78,15 @@ export default function ReservaPage() {
   const [modalities, setModalities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const caminho = `${location.pathname}${location.search}`;
+    if (isCustomerDataRoute) {
+      registrarVisualizacaoDadosReserva(caminho);
+      return;
+    }
+    registrarVisualizacaoMarcacaoReserva(caminho);
+  }, [isCustomerDataRoute, location.pathname, location.search]);
 
   useEffect(() => {
     let active = true;

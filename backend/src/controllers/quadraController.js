@@ -42,6 +42,14 @@ export const listar = executarAssincrono(async (_req, res) => {
   res.json({ quadras });
 });
 
+export const listarAdmin = executarAssincrono(async (_req, res) => {
+  const quadras = await Quadra.findAll({
+    include: incluirModalidades,
+    order: [["nome", "ASC"]],
+  });
+  res.json({ quadras });
+});
+
 export const buscarPorId = executarAssincrono(async (req, res) => {
   const quadra = await Quadra.findOne({
     where: { id: validarId(req.params.id, "Quadra"), status: "ativa" },

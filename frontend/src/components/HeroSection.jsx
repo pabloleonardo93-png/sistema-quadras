@@ -1,12 +1,6 @@
-import {
-  ArrowDown,
-  CalendarCheck,
-  Clock3,
-  MapPin,
-  ShieldCheck,
-  Sun,
-} from "lucide-react";
-import { arenaInfo } from "../constants/arenaInfo";
+import { useLayoutEffect, useRef } from "react";
+import { ArrowDown, Sun } from "lucide-react";
+import { gsap } from "gsap";
 import { Button } from "./Button";
 
 const tickerItems = [
@@ -20,14 +14,86 @@ const tickerItems = [
   "Agenda online",
 ];
 
-export function HeroSection({ onReserve }) {
-  const todayLabel = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  })
-    .format(new Date())
-    .replace(".", "")
-    .toUpperCase();
+export function HeroSection({ onExploreCourts, onReserve }) {
+  const tickerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const ticker = tickerRef.current;
+    if (!ticker) return undefined;
+
+    const textItems = Array.from(
+      ticker.querySelectorAll(".hero__ticker-text"),
+    );
+    const media = gsap.matchMedia();
+    const context = gsap.context(() => {
+      media.add(
+        {
+          canAnimate: "(prefers-reduced-motion: no-preference)",
+          reduceMotion: "(prefers-reduced-motion: reduce)",
+          compactMobile: "(max-width: 520px)",
+          compactTablet: "(max-width: 760px)",
+        },
+        ({ conditions }) => {
+          gsap.set(textItems, {
+            autoAlpha: 1,
+            clipPath: "inset(0% 0% 0% 0%)",
+            yPercent: 0,
+          });
+
+          if (conditions.reduceMotion) return undefined;
+
+          const visibleItems = textItems.filter(
+            (item) => item.getClientRects().length > 0,
+          );
+
+          const timeline = gsap.timeline({
+            repeat: -1,
+            repeatDelay: 2.5,
+            delay: 2.5,
+          });
+
+          timeline
+            .to(visibleItems, {
+              autoAlpha: 0,
+              clipPath: "inset(0% 0% 0% 100%)",
+              duration: 0.55,
+              ease: "power3.inOut",
+              stagger: {
+                each: 0.12,
+                from: "start",
+              },
+            })
+            .set(visibleItems, {
+              autoAlpha: 0,
+              clipPath: "inset(100% 0% 0% 0%)",
+              yPercent: 110,
+            })
+            .to(
+              visibleItems,
+              {
+                autoAlpha: 1,
+                clipPath: "inset(0% 0% 0% 0%)",
+                yPercent: 0,
+                duration: 0.65,
+                ease: "power3.out",
+                stagger: {
+                  each: 0.12,
+                  from: "start",
+                },
+              },
+              "+=0.18",
+            );
+
+          return () => timeline.kill();
+        },
+      );
+    }, ticker);
+
+    return () => {
+      media.revert();
+      context.revert();
+    };
+  }, []);
 
   return (
     <section className="hero" id="inicio">
@@ -44,8 +110,14 @@ export function HeroSection({ onReserve }) {
             Seu esporte. Sua areia. Seu horário.
           </div>
           <h1>
-            A PARTIDA
-            <span>COMEÇA AQUI.</span>
+            <span className="hero__title-line hero__title-line--primary">
+              <span className="hero__title-word">A</span>{" "}
+              <span className="hero__title-word">PARTIDA</span>
+            </span>
+            <span className="hero__title-line hero__title-line--accent">
+              <span className="hero__title-word">COMEÇA</span>{" "}
+              <span className="hero__title-word">AQUI.</span>
+            </span>
           </h1>
           <p>
             Reserve online, acompanhe a disponibilidade real e chegue com a
@@ -55,8 +127,15 @@ export function HeroSection({ onReserve }) {
             <Button onClick={onReserve} showArrow>
               Reservar agora
             </Button>
-            <a className="text-link" href="#quadras">
-              Conhecer as quadras
+            <a
+              className="button button--primary"
+              href="#quadras"
+              onClick={(event) => {
+                event.preventDefault();
+                onExploreCourts?.();
+              }}
+            >
+              <span>Conhecer as quadras</span>
               <ArrowDown aria-hidden="true" size={17} />
             </a>
           </div>
@@ -76,52 +155,17 @@ export function HeroSection({ onReserve }) {
           </div>
         </div>
 
-        <aside className="match-card" aria-label="Informações rápidas">
-          <div className="match-card__header">
-            <span>Próximo jogo</span>
-            <span className="live-pill">Agenda aberta</span>
-          </div>
-          <div className="match-card__date">
-            <span className="match-card__day">HOJE</span>
-            <strong>{todayLabel}</strong>
-          </div>
-          <div className="match-card__divider" />
-          <ul>
-            <li>
-              <Clock3 aria-hidden="true" size={18} />
-              <span>
-                <small>Funcionamento</small>
-                {arenaInfo.openingHours}
-              </span>
-            </li>
-            <li>
-              <MapPin aria-hidden="true" size={18} />
-              <span>
-                <small>Localização</small>
-                Jardim Atlântico
-              </span>
-            </li>
-            <li>
-              <ShieldCheck aria-hidden="true" size={18} />
-              <span>
-                <small>Estrutura</small>
-                Segura e completa
-              </span>
-            </li>
-          </ul>
-          <Button variant="dark" onClick={onReserve}>
-            <CalendarCheck aria-hidden="true" size={18} />
-            Ver horários
-          </Button>
-        </aside>
       </div>
 
-      <div className="hero__ticker" aria-label="Destaques do complexo">
+      <div
+        className="hero__ticker"
+        aria-label="Destaques do complexo"
+        ref={tickerRef}
+      >
         <div className="hero__ticker-track">
-          {[...tickerItems, ...tickerItems].map((item, index) => (
-            <span className="hero__ticker-item" key={`${item}-${index}`}>
-              {item}
-              <i aria-hidden="true" />
+          {tickerItems.map((item) => (
+            <span className="hero__ticker-item" key={item}>
+              <span className="hero__ticker-text">{item}</span>
             </span>
           ))}
         </div>

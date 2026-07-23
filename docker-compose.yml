@@ -19,6 +19,8 @@ services:
 
   backend:
     image: ghcr.io/pabloleonardo93-png/sistema-quadras-backend:latest
+    build:
+      context: ./backend
     container_name: pe-na-areia-backend
     restart: unless-stopped
     labels:
@@ -63,6 +65,9 @@ services:
 
   frontend:
     image: ghcr.io/pabloleonardo93-png/sistema-quadras:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: pe-na-areia-frontend
     restart: unless-stopped
     labels:

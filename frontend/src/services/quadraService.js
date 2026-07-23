@@ -5,6 +5,15 @@ export async function listarQuadras(params) {
   return response.quadras || [];
 }
 
+export async function listarQuadrasAdmin() {
+  try {
+    const response = await api.get("/quadras/admin/todas");
+    return response.quadras || [];
+  } catch {
+    return listarQuadras();
+  }
+}
+
 export async function buscarQuadra(id) {
   const response = await api.get(`/quadras/${id}`);
   return response.quadra;

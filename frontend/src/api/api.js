@@ -49,13 +49,13 @@ async function request(path, options = {}) {
     try {
       data = JSON.parse(text);
     } catch {
-      throw new ApiError("A API retornou uma resposta invalida.", response.status, text);
+      throw new ApiError("O sistema retornou uma resposta invalida.", response.status, text);
     }
   }
 
   if (!response.ok) {
     throw new ApiError(
-      data?.mensagem || data?.erro || "Erro ao conectar com a API. Tente novamente.",
+      data?.mensagem || data?.erro || "Erro ao conectar com o sistema. Tente novamente.",
       response.status,
       data,
     );
