@@ -15,6 +15,11 @@ function getToken() {
   return localStorage.getItem("token");
 }
 
+function clearAdminSession() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("administrador");
+}
+
 function buildUrl(path, params) {
   const endpoint = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
   const url = API_BASE_URL.startsWith("http")
@@ -30,14 +35,15 @@ function buildUrl(path, params) {
 }
 
 async function request(path, options = {}) {
-  const { body, headers, params, ...rest } = options;
+  const { auth = true, body, headers, params, ...rest } = options;
   const token = getToken();
+  const shouldUseAdminToken = auth !== false;
   const response = await fetch(buildUrl(path, params), {
     ...rest,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(shouldUseAdminToken && token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -54,6 +60,17 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      shouldUseAdminToken &&
+      token &&
+      window.location.pathname.startsWith("/admin") &&
+      !window.location.pathname.startsWith("/admin/login")
+    ) {
+      clearAdminSession();
+      window.location.replace("/admin/login");
+    }
+
     throw new ApiError(
       data?.mensagem || data?.erro || "Erro ao conectar com o sistema. Tente novamente.",
       response.status,

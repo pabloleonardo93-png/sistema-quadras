@@ -34,6 +34,7 @@ export function limparSessaoEmailSalva() {
 export async function buscarSessaoEmail() {
   const token = obterTokenSalvo();
   const sessao = await api.get("/verificacao-email/sessao", undefined, {
+    auth: false,
     headers: token ? { "X-Email-Verification-Token": token } : {},
   });
 
@@ -45,11 +46,15 @@ export async function buscarSessaoEmail() {
 }
 
 export async function solicitarCodigoEmail(email) {
-  return api.post("/verificacao-email/enviar", { email });
+  return api.post("/verificacao-email/enviar", { email }, { auth: false });
 }
 
 export async function confirmarCodigoEmail(email, codigo) {
-  const response = await api.post("/verificacao-email/confirmar", { email, codigo });
+  const response = await api.post(
+    "/verificacao-email/confirmar",
+    { email, codigo },
+    { auth: false },
+  );
   salvarToken(response?.token);
   return response;
 }

@@ -14,6 +14,7 @@ export async function listarReservas(params) {
 
 export async function criarReserva(dados, emailVerificationToken) {
   const response = await api.post("/reservas", dados, {
+    auth: false,
     headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
@@ -38,6 +39,7 @@ export async function criarReservaPublica(dados) {
 
 export async function criarPagamentoMercadoPago(dados, emailVerificationToken) {
   const response = await api.post("/pagamentos/mercadopago/criar", dados, {
+    auth: false,
     headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
@@ -45,6 +47,7 @@ export async function criarPagamentoMercadoPago(dados, emailVerificationToken) {
 
 export async function criarPixMercadoPago(dados, emailVerificationToken) {
   const response = await api.post("/pagamentos/mercadopago/pix/criar", dados, {
+    auth: false,
     headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
