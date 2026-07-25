@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { criarCheckoutReserva } from "../../controllers/pagamentoController.js";
+import { criarCheckoutReserva } from "../pagamentos/pagamento.controller.js";
 import { autenticarAdministrador } from "../../middlewares/authMiddleware.js";
 import { validarEmailVerificado } from "../../middlewares/validarEmailVerificado.js";
 import * as controller from "./reserva.controller.js";

@@ -6,12 +6,11 @@ import clienteRoutes from "../modules/clientes/cliente.routes.js";
 import comunicadoRoutes from "../modules/comunicados/comunicado.routes.js";
 import horarioRoutes from "../modules/horarios/horario.routes.js";
 import modalidadeRoutes from "../modules/modalidades/modalidade.routes.js";
-import pagamentoRoutes from "./pagamentoRoutes.js";
+import { pagamentoRoutes, webhookRoutes } from "../modules/pagamentos/pagamento.routes.js";
 import quadraRoutes from "../modules/quadras/quadra.routes.js";
 import relatorioRoutes from "../modules/relatorios/relatorio.routes.js";
 import reservaRoutes from "../modules/reservas/reserva.routes.js";
 import verificacaoEmailRoutes from "../modules/verificacao-email/verificacaoEmail.routes.js";
-import webhookRoutes from "./webhookRoutes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
