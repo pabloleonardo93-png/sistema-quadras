@@ -8,9 +8,11 @@ import { rotaNaoEncontrada, tratarErro } from "./middlewares/errorMiddleware.js"
 import "./models/index.js";
 import routes from "./routes/index.js";
 import { criarCorsOptions } from "./config/cors.js";
+import { trustProxyHops } from "./config/proxy.js";
 
 const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", trustProxyHops);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use((req, res, next) => cors(criarCorsOptions(req))(req, res, next));
 app.use(express.json({ limit: "1mb" }));

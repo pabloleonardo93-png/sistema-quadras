@@ -71,9 +71,23 @@ RESEND_TEMPLATE_VERIFICACAO_ID=id_do_template_publicado
 EMAIL_FROM="Pe na Areia <reservas@seudominio.com>"
 EMAIL_VERIFICATION_PROVIDER=resend
 CODIGO_VERIFICACAO_EXPIRACAO_MINUTOS=10
+EMAIL_VERIFICATION_RESEND_SECONDS=60
+EMAIL_VERIFICATION_RATE_WINDOW_MINUTES=60
+EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL=5
+EMAIL_VERIFICATION_MAX_SENDS_PER_IP=30
+TRUST_PROXY_HOPS=2
 ~~~
 
 O remetente de **EMAIL_FROM** precisa pertencer a um dominio/remetente verificado no painel do Resend. O backend envia a variavel **codigo** para o template publicado. Para teste local sem envio real, use **EMAIL_VERIFICATION_PROVIDER=mock**.
+
+Limites de envio do codigo de verificacao:
+
+- **EMAIL_VERIFICATION_RESEND_SECONDS**: intervalo minimo, em segundos, antes de permitir novo envio para o mesmo e-mail;
+- **EMAIL_VERIFICATION_RATE_WINDOW_MINUTES**: duracao da janela usada para contar envios recentes;
+- **EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL**: maximo de envios para o mesmo e-mail dentro da janela;
+- **EMAIL_VERIFICATION_MAX_SENDS_PER_IP**: maximo de envios para o mesmo IP dentro da janela.
+
+Quando a API estiver atras do Nginx da VPS e do Nginx do container, configure **TRUST_PROXY_HOPS=2** para o Express usar o IP real do cliente em `req.ip`. Valores ausentes ou invalidos voltam para `0`, sem confiar em `X-Forwarded-For`. O Nginx publico da VPS deve sobrescrever `X-Forwarded-For` com `$remote_addr`; nao use `$proxy_add_x_forwarded_for` na borda publica, pois isso preserva valores enviados pelo navegador.
 
 ## Banco de dados
 
