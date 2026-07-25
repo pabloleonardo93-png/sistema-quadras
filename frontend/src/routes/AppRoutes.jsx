@@ -1,34 +1,12 @@
-import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Home from "../pages/Home";
 import PrivateRoute from "./PrivateRoute";
 import PagamentoRetorno from "../pages/PagamentoRetorno";
 import ReservaPage from "../pages/ReservaPage";
-
-const AdminClientesPage = lazy(() => import("../features/admin-clientes/pages/AdminClientesPage"));
-const AdminComunicadosPage = lazy(() => import("../features/admin-comunicados/pages/AdminComunicadosPage"));
-const AdminDashboardPage = lazy(() => import("../features/admin-dashboard/pages/AdminDashboardPage"));
-const AdminHorariosPage = lazy(() => import("../features/admin-horarios/pages/AdminHorariosPage"));
-const AdminLoginPage = lazy(() => import("../features/admin-auth/pages/AdminLoginPage"));
-const AdminModalidadesPage = lazy(() => import("../features/admin-modalidades/pages/AdminModalidadesPage"));
-const AdminQuadrasPage = lazy(() => import("../features/admin-quadras/pages/AdminQuadrasPage"));
-const AdminRelatoriosPage = lazy(() => import("../features/admin-relatorios/pages/AdminRelatoriosPage"));
-const AdminReservasPage = lazy(() => import("../features/admin-reservas/pages/AdminReservasPage"));
-
-function adminFallback() {
-  return (
-    <main className="admin-page">
-      <p className="admin-muted">Carregando painel...</p>
-    </main>
-  );
-}
-
-function adminPage(page) {
-  return <Suspense fallback={adminFallback()}>{page}</Suspense>;
-}
+import { AdminLogin, AdminPanel } from "../pages/admin/AdminPanel";
 
 function protectedPage(page) {
-  return <PrivateRoute>{adminPage(page)}</PrivateRoute>;
+  return <PrivateRoute>{page}</PrivateRoute>;
 }
 
 export default function AppRoutes() {
@@ -40,15 +18,15 @@ export default function AppRoutes() {
         <Route path="/reserva/dados" element={<ReservaPage />} />
         <Route path="/pagamento/retorno" element={<PagamentoRetorno />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="/admin/login" element={adminPage(<AdminLoginPage />)} />
-        <Route path="/admin/dashboard" element={protectedPage(<AdminDashboardPage />)} />
-        <Route path="/admin/reservas" element={protectedPage(<AdminReservasPage />)} />
-        <Route path="/admin/quadras" element={protectedPage(<AdminQuadrasPage />)} />
-        <Route path="/admin/modalidades" element={protectedPage(<AdminModalidadesPage />)} />
-        <Route path="/admin/horarios" element={protectedPage(<AdminHorariosPage />)} />
-        <Route path="/admin/clientes" element={protectedPage(<AdminClientesPage />)} />
-        <Route path="/admin/comunicados" element={protectedPage(<AdminComunicadosPage />)} />
-        <Route path="/admin/relatorios" element={protectedPage(<AdminRelatoriosPage />)} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={protectedPage(<AdminPanel route="dashboard" />)} />
+        <Route path="/admin/reservas" element={protectedPage(<AdminPanel route="reservas" />)} />
+        <Route path="/admin/quadras" element={protectedPage(<AdminPanel route="quadras" />)} />
+        <Route path="/admin/modalidades" element={protectedPage(<AdminPanel route="modalidades" />)} />
+        <Route path="/admin/horarios" element={protectedPage(<AdminPanel route="horarios" />)} />
+        <Route path="/admin/clientes" element={protectedPage(<AdminPanel route="clientes" />)} />
+        <Route path="/admin/comunicados" element={protectedPage(<AdminPanel route="comunicados" />)} />
+        <Route path="/admin/relatorios" element={protectedPage(<AdminPanel route="relatorios" />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
