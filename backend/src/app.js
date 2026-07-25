@@ -10,6 +10,16 @@ import routes from "./routes/index.js";
 import { criarCorsOptions } from "./config/cors.js";
 
 const app = express();
+
+function obterTrustProxy() {
+  const valor = String(process.env.TRUST_PROXY || "").trim().toLowerCase();
+  if (!valor || valor === "false" || valor === "0") return false;
+  if (valor === "true") return true;
+  if (/^\d+$/.test(valor)) return Number(valor);
+  throw new Error("TRUST_PROXY deve ser false, true ou a quantidade de proxies confiaveis.");
+}
+
+app.set("trust proxy", obterTrustProxy());
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use((req, res, next) => cors(criarCorsOptions(req))(req, res, next));

@@ -36,8 +36,8 @@ test("preserva retorno de webhook ignorado e valida id da reserva no checkout", 
   assert.deepEqual(await ignorado.json(), { recebido: true, ignorado: true });
 
   const checkout = await fetch(`${baseUrl}/api/reservas/invalida/pagamento`, { method: "POST" });
-  assert.equal(checkout.status, 400);
-  assert.deepEqual(await checkout.json(), { erro: "Reserva inv\u00e1lido." });
+  assert.equal(checkout.status, 401);
+  assert.deepEqual(await checkout.json(), { erro: "Valide o e-mail antes de continuar." });
 });
 
 test("rejeita assinatura invalida antes de consultar o provider", async (t) => {

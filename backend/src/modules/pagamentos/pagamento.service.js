@@ -11,7 +11,7 @@ import {
   RESERVA_STATUS_BLOQUEIAM_PAGAMENTO,
 } from "../../shared/constants/reservaStatus.js";
 import ErroDaAplicacao from "../../utils/ErroDaAplicacao.js";
-import { validarId } from "../../utils/validacoes.js";
+import { validarEmail, validarId } from "../../utils/validacoes.js";
 import { dadosExpiracaoPagamento } from "../reservas/expiracaoReserva.service.js";
 import * as repository from "./pagamento.repository.js";
 import * as mercadoPagoClient from "./providers/mercadoPagoClient.js";
@@ -117,9 +117,22 @@ function validarReservaParaPagamento(reserva) {
   }
 }
 
-export async function criarCheckoutDaReserva({ reservaId }) {
+function validarComprovacaoDePosseDaReserva(reserva, emailVerificado) {
+  const emailDaReserva = reserva?.cliente?.email ? validarEmail(reserva.cliente.email) : "";
+  const emailDaSessao = emailVerificado?.email ? validarEmail(emailVerificado.email) : "";
+  if (!emailDaReserva || !emailDaSessao || emailDaReserva !== emailDaSessao) {
+    throw new ErroDaAplicacao("Valide o e-mail vinculado a reserva antes de continuar.", 403);
+  }
+}
+
+export async function criarCheckoutDaReserva({
+  reservaId,
+  emailVerificado = null,
+  exigirComprovacaoDePosse = false,
+}) {
   const reserva = await repository.buscarReservaParaPagamento(validarId(reservaId, "Reserva"));
   validarReservaParaPagamento(reserva);
+  if (exigirComprovacaoDePosse) validarComprovacaoDePosseDaReserva(reserva, emailVerificado);
   if (reserva.pagamentoStatus === PAGAMENTO_STATUS.APROVADO) {
     return { reserva, checkoutUrl: reserva.pagamentoUrl, preferenceId: reserva.mercadoPagoPreferenceId };
   }
@@ -191,9 +204,14 @@ export async function criarCheckoutDaReserva({ reservaId }) {
   };
 }
 
-export async function criarPixDaReserva({ reservaId }) {
+export async function criarPixDaReserva({
+  reservaId,
+  emailVerificado = null,
+  exigirComprovacaoDePosse = false,
+}) {
   const reserva = await repository.buscarReservaParaPagamento(validarId(reservaId, "Reserva"));
   validarReservaParaPagamento(reserva);
+  if (exigirComprovacaoDePosse) validarComprovacaoDePosseDaReserva(reserva, emailVerificado);
   if (reserva.pagamentoStatus === PAGAMENTO_STATUS.APROVADO) {
     throw new ErroDaAplicacao("Essa reserva ja esta paga.", 409);
   }
@@ -299,7 +317,11 @@ async function criarPagamentoNoFluxo({ body, emailVerificado, enderecoIp, criarP
       emailVerificado,
       enderecoIp,
     }));
-    return await criarPagamento({ reservaId: reserva.id });
+    return await criarPagamento({
+      reservaId: reserva.id,
+      emailVerificado,
+      exigirComprovacaoDePosse: Boolean(body.reservaId || body.reserva_id),
+    });
   } catch (erro) {
     await cancelarReservaCriadaNoFluxo({ reserva, criouReservaNesteFluxo, enderecoIp });
     throw erro;

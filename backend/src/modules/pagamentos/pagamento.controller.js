@@ -3,6 +3,20 @@ import * as service from "./pagamento.service.js";
 import { processarWebhookMercadoPago } from "./webhook.service.js";
 import { validarAssinaturaWebhookMercadoPago } from "./providers/mercadoPagoClient.js";
 
+function reservaPublicaParaPagamento(reserva) {
+  return {
+    id: reserva.id,
+    status: reserva.status,
+    pagamentoStatus: reserva.pagamentoStatus,
+    valorTotal: reserva.valorTotal,
+    data: reserva.data,
+    horaInicio: reserva.horaInicio,
+    horaFim: reserva.horaFim,
+    quadra: reserva.quadra ? { id: reserva.quadra.id, nome: reserva.quadra.nome } : null,
+    modalidade: reserva.modalidade ? { id: reserva.modalidade.id, nome: reserva.modalidade.nome } : null,
+  };
+}
+
 export const criarPagamentoMercadoPago = executarAssincrono(async (req, res) => {
   const resultado = await service.criarPagamentoMercadoPago({
     body: req.body,
@@ -35,10 +49,14 @@ export const criarPixMercadoPago = executarAssincrono(async (req, res) => {
 });
 
 export const criarCheckoutReserva = executarAssincrono(async (req, res) => {
-  const resultado = await service.criarCheckoutDaReserva({ reservaId: req.params.id });
+  const resultado = await service.criarCheckoutDaReserva({
+    reservaId: req.params.id,
+    emailVerificado: req.emailVerificado,
+    exigirComprovacaoDePosse: true,
+  });
   res.status(201).json({
     mensagem: "Checkout criado com sucesso.",
-    reserva: resultado.reserva,
+    reserva: reservaPublicaParaPagamento(resultado.reserva),
     checkoutUrl: resultado.checkoutUrl,
     preferenceId: resultado.preferenceId,
     pagamentoExpiraEm: resultado.pagamentoExpiraEm,

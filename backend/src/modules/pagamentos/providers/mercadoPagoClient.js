@@ -7,6 +7,19 @@ function accessToken() {
   return process.env.MERCADO_PAGO_ACCESS_TOKEN;
 }
 
+function webhookSecret() {
+  return String(process.env.MERCADO_PAGO_WEBHOOK_SECRET || "").trim();
+}
+
+export function validarConfiguracaoWebhookMercadoPago({
+  ambiente = process.env.NODE_ENV,
+  segredo = webhookSecret(),
+} = {}) {
+  if (ambiente === "production" && !segredo) {
+    throw new Error("MERCADO_PAGO_WEBHOOK_SECRET deve ser configurado em producao.");
+  }
+}
+
 export function garantirMercadoPagoConfigurado() {
   if (!accessToken()) {
     throw new ErroDaAplicacao("Mercado Pago nao configurado. Defina MERCADO_PAGO_ACCESS_TOKEN no backend.", 503);
@@ -14,7 +27,8 @@ export function garantirMercadoPagoConfigurado() {
 }
 
 export function validarAssinaturaWebhookMercadoPago({ paymentId, requestId, signature }) {
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  validarConfiguracaoWebhookMercadoPago();
+  const secret = webhookSecret();
   if (!secret) return;
 
   if (!paymentId || !requestId || !signature) {

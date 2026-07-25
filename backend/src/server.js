@@ -2,6 +2,7 @@ import "./config/env.js";
 import app from "./app.js";
 import sequelize from "./config/database.js";
 import { iniciarExpiradorReservasPendentes } from "./services/expiracaoReservaService.js";
+import { validarConfiguracaoWebhookMercadoPago } from "./modules/pagamentos/providers/mercadoPagoClient.js";
 
 const porta = Number(process.env.PORT || 3000);
 
@@ -10,6 +11,7 @@ async function iniciarServidor() {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET não foi configurada.");
     }
+    validarConfiguracaoWebhookMercadoPago();
     await sequelize.authenticate();
     iniciarExpiradorReservasPendentes();
     app.listen(porta, () => {
