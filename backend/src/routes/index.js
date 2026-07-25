@@ -9,7 +9,7 @@ import modalidadeRoutes from "../modules/modalidades/modalidade.routes.js";
 import pagamentoRoutes from "./pagamentoRoutes.js";
 import quadraRoutes from "../modules/quadras/quadra.routes.js";
 import relatorioRoutes from "../modules/relatorios/relatorio.routes.js";
-import reservaRoutes from "./reservaRoutes.js";
+import reservaRoutes from "../modules/reservas/reserva.routes.js";
 import verificacaoEmailRoutes from "../modules/verificacao-email/verificacaoEmail.routes.js";
 import webhookRoutes from "./webhookRoutes.js";
 

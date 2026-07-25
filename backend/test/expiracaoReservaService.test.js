@@ -8,7 +8,8 @@ import Reserva from "../src/models/Reserva.js";
 import { PAGAMENTO_STATUS } from "../src/shared/constants/pagamentoStatus.js";
 import { RESERVA_STATUS } from "../src/shared/constants/reservaStatus.js";
 import { HORARIO_STATUS } from "../src/shared/constants/statusAdministrativos.js";
-import { expirarReservasPendentes } from "../src/services/expiracaoReservaService.js";
+import { expirarReservasPendentes } from "../src/modules/reservas/expiracaoReserva.service.js";
+import * as expiracaoReservaServiceFacade from "../src/services/expiracaoReservaService.js";
 
 const transaction = { LOCK: { UPDATE: "UPDATE" } };
 
@@ -50,4 +51,8 @@ test("expira reservas pendentes com pagamento vencido e libera horarios", async 
     { where: { id: reserva.horarioId }, transaction },
   ]);
   assert.equal(logMock.mock.calls[0].arguments[0].acao, "reserva_expirada");
+});
+
+test("mantem a fachada de expiracao compativel com o agendador existente", () => {
+  assert.equal(expiracaoReservaServiceFacade.expirarReservasPendentes, expirarReservasPendentes);
 });
