@@ -3,6 +3,8 @@ services:
     image: postgres:18.4-alpine
     container_name: pe-na-areia-postgres
     restart: unless-stopped
+    labels:
+      wud.watch: "false"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Configure POSTGRES_DB no .env da VPS}
       POSTGRES_USER: ${POSTGRES_USER:?Configure POSTGRES_USER no .env da VPS}
@@ -90,6 +92,8 @@ services:
     image: getwud/wud:latest
     container_name: pe-na-areia-wud
     restart: unless-stopped
+    labels:
+      wud.watch: "false"
     depends_on:
       - frontend
       - backend
@@ -99,7 +103,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       WUD_WATCHER_LOCAL_CRON: ${WUD_WATCHER_LOCAL_CRON:-*/2 * * * *}
-      WUD_TRIGGER_DOCKER_LOCAL_AUTO: ${WUD_TRIGGER_DOCKER_LOCAL_AUTO:-true}
+      WUD_WATCHER_LOCAL_WATCHBYDEFAULT: ${WUD_WATCHER_LOCAL_WATCHBYDEFAULT:-false}
+      WUD_TRIGGER_DOCKER_LOCAL_AUTO: ${WUD_AUTO_UPDATE:-false}
       WUD_TRIGGER_DOCKER_LOCAL_PRUNE: ${WUD_TRIGGER_DOCKER_LOCAL_PRUNE:-true}
 
 volumes:
