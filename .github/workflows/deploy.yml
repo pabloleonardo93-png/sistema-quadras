@@ -4,9 +4,51 @@ on:
   push:
     branches: [ main ]
 
+env:
+  FRONTEND_IMAGE: ghcr.io/pabloleonardo93-png/sistema-quadras
+  BACKEND_IMAGE: ghcr.io/pabloleonardo93-png/sistema-quadras-backend
+
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configura Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instala dependencias do backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Testa backend
+        working-directory: backend
+        run: npm test
+
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: Instala dependencias do frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: validate
     permissions:
       contents: read
       packages: write
@@ -26,7 +68,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/pabloleonardo93-png/sistema-quadras:latest
+          tags: ${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
           build-args: |
             VITE_API_URL=/api
 
@@ -35,4 +79,6 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/pabloleonardo93-png/sistema-quadras-backend:latest
+          tags: ${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
