@@ -43,7 +43,7 @@ Infraestrutura:
 - Docker.
 - Docker Compose.
 - Nginx.
-- PostgreSQL 16 Alpine.
+- PostgreSQL 16 Alpine no Compose de desenvolvimento e PostgreSQL 18.4 Alpine no Compose de producao.
 
 ## Estrutura de Pastas
 
@@ -542,9 +542,17 @@ Outros limites:
 
 `docker-compose.yml` sobe:
 
-- `postgres`: PostgreSQL 16 Alpine com volume `postgres_data`.
+- `postgres`: PostgreSQL 16 Alpine para desenvolvimento local, com volume `postgres_data`.
 - `backend`: build de `./backend`, executa migrations, seeders e `npm start`.
 - `frontend`: build da raiz via `Dockerfile`, exposto em `${FRONTEND_BIND:-127.0.0.1:8080}:80`.
+
+`deploy/docker-compose.vps.yml` e o Compose de producao:
+
+- `postgres`: PostgreSQL 18.4 Alpine com `postgres_data` montado em `/var/lib/postgresql`.
+- `backend` e `frontend`: usam imagens publicadas no GHCR, sem `build` na VPS.
+- `wud`: observa somente `backend` e `frontend`.
+
+Os dumps de producao devem ser restaurados em PostgreSQL 18 ou em uma versao superior compativel. Nao reutilize diretamente diretorios fisicos de dados entre versoes; a migracao deve usar dump e restore previamente validados.
 
 Volumes:
 
