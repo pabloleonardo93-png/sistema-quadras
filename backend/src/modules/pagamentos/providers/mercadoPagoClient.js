@@ -26,12 +26,19 @@ export function garantirMercadoPagoConfigurado() {
   }
 }
 
-export function validarAssinaturaWebhookMercadoPago({ paymentId, requestId, signature }) {
+export function validarCabecalhosWebhookMercadoPago({ requestId, signature }) {
   validarConfiguracaoWebhookMercadoPago();
+  if (!requestId || !signature) {
+    throw new ErroDaAplicacao("Webhook do Mercado Pago sem assinatura valida.", 401);
+  }
+}
+
+export function validarAssinaturaWebhookMercadoPago({ paymentId, requestId, signature }) {
+  validarCabecalhosWebhookMercadoPago({ requestId, signature });
   const secret = webhookSecret();
   if (!secret) return;
 
-  if (!paymentId || !requestId || !signature) {
+  if (!paymentId) {
     throw new ErroDaAplicacao("Webhook do Mercado Pago sem assinatura valida.", 401);
   }
 

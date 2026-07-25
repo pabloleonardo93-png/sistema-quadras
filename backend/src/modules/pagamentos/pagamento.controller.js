@@ -1,7 +1,10 @@
 import executarAssincrono from "../../utils/executarAssincrono.js";
 import * as service from "./pagamento.service.js";
 import { processarWebhookMercadoPago } from "./webhook.service.js";
-import { validarAssinaturaWebhookMercadoPago } from "./providers/mercadoPagoClient.js";
+import {
+  validarAssinaturaWebhookMercadoPago,
+  validarCabecalhosWebhookMercadoPago,
+} from "./providers/mercadoPagoClient.js";
 
 function reservaPublicaParaPagamento(reserva) {
   return {
@@ -65,16 +68,21 @@ export const criarCheckoutReserva = executarAssincrono(async (req, res) => {
 });
 
 export const webhookMercadoPago = executarAssincrono(async (req, res) => {
-  const tipo = req.body.type || req.body.topic || req.query.type || req.query.topic;
-  const paymentId = req.body.data?.id || req.query["data.id"] || req.query.id;
+  const requestId = req.headers["x-request-id"];
+  const signature = req.headers["x-signature"];
+  validarCabecalhosWebhookMercadoPago({ requestId, signature });
+
+  const body = req.body ?? {};
+  const tipo = body.type || body.topic || req.query.type || req.query.topic;
+  const paymentId = body.data?.id || req.query["data.id"] || req.query.id;
   if (tipo && tipo !== "payment") {
     return res.status(200).json({ recebido: true, ignorado: true });
   }
 
   validarAssinaturaWebhookMercadoPago({
     paymentId,
-    requestId: req.headers["x-request-id"],
-    signature: req.headers["x-signature"],
+    requestId,
+    signature,
   });
   const resultado = await processarWebhookMercadoPago({ paymentId });
   return res.status(200).json({ recebido: true, ...resultado });
