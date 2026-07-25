@@ -4,6 +4,7 @@ import { once } from "node:events";
 import http from "node:http";
 import test from "node:test";
 import app from "../src/app.js";
+import sequelize from "../src/config/database.js";
 
 async function iniciarServidor(t) {
   const servidor = http.createServer(app);
@@ -109,6 +110,9 @@ test("rejeita webhook sem assinatura antes de acessar payload ou provider", asyn
     throw new Error("O provider nao deve ser chamado.");
   };
   t.after(() => { globalThis.fetch = fetchOriginal; });
+  const transacaoMock = t.mock.method(sequelize, "transaction", async () => {
+    throw new Error("O banco nao deve ser acessado.");
+  });
 
   const baseUrl = await iniciarServidor(t);
   for (const path of [
@@ -137,4 +141,5 @@ test("rejeita webhook sem assinatura antes de acessar payload ou provider", asyn
   });
   assert.equal(assinaturaInvalida.status, 401);
   assert.equal(chamadasAoProvider, 0);
+  assert.equal(transacaoMock.mock.calls.length, 0);
 });
