@@ -1,11 +1,6 @@
 require("../../config/env.cjs");
 const bcrypt = require("bcrypt");
 const { QueryTypes } = require("sequelize");
-const {
-  HORA_ABERTURA,
-  HORA_FECHAMENTO,
-  funcionaNaData,
-} = require("../../shared/constants/funcionamento.cjs");
 
 const modalidadesIniciais = [
   {
@@ -74,9 +69,15 @@ function datasFuturasPadrao() {
   return datas;
 }
 
+function funcionaNaData(data) {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
+  return diaSemana !== 1;
+}
+
 function janelasDeFuncionamento() {
   const janelas = [];
-  for (let hora = Number(HORA_ABERTURA.slice(0, 2)); hora < Number(HORA_FECHAMENTO.slice(0, 2)); hora += 1) {
+  for (let hora = 8; hora < 22; hora += 1) {
     const horaInicio = String(hora).padStart(2, "0") + ":00";
     const horaFim = String(hora + 1).padStart(2, "0") + ":00";
     janelas.push([horaInicio, horaFim]);

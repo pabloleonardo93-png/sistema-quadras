@@ -1,11 +1,5 @@
 import { DataTypes, Op } from "sequelize";
 import sequelize from "../config/database.js";
-import { PAGAMENTO_STATUS, PAGAMENTO_STATUS_LISTA } from "../shared/constants/pagamentoStatus.js";
-import {
-  RESERVA_STATUS,
-  RESERVA_STATUS_LISTA,
-  RESERVA_STATUS_SEM_CONFLITO_DE_HORARIO,
-} from "../shared/constants/reservaStatus.js";
 import { opcoesComuns } from "./opcoesComuns.js";
 
 const Reserva = sequelize.define("Reserva", {
@@ -18,15 +12,15 @@ const Reserva = sequelize.define("Reserva", {
   horaInicio: { type: DataTypes.TIME, allowNull: false, field: "hora_inicio" },
   horaFim: { type: DataTypes.TIME, allowNull: false, field: "hora_fim" },
   status: {
-    type: DataTypes.ENUM(...RESERVA_STATUS_LISTA),
+    type: DataTypes.ENUM("aguardando_pagamento", "confirmada", "cancelada", "expirada", "finalizada"),
     allowNull: false,
-    defaultValue: RESERVA_STATUS.AGUARDANDO_PAGAMENTO,
+    defaultValue: "aguardando_pagamento",
   },
   valorTotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 0, field: "valor_total" },
   pagamentoStatus: {
-    type: DataTypes.ENUM(...PAGAMENTO_STATUS_LISTA),
+    type: DataTypes.ENUM("pendente", "aprovado", "recusado", "cancelado", "estornado"),
     allowNull: false,
-    defaultValue: PAGAMENTO_STATUS.PENDENTE,
+    defaultValue: "pendente",
     field: "pagamento_status",
   },
   mercadoPagoPreferenceId: { type: DataTypes.STRING(120), allowNull: true, field: "mercado_pago_preference_id" },
@@ -44,7 +38,7 @@ const Reserva = sequelize.define("Reserva", {
     name: "reservas_quadra_horario_ativo_unique",
     unique: true,
     fields: ["quadra_id", "data", "hora_inicio"],
-    where: { status: { [Op.notIn]: RESERVA_STATUS_SEM_CONFLITO_DE_HORARIO } },
+    where: { status: { [Op.notIn]: ["cancelada", "expirada"] } },
   }],
 });
 

@@ -6,11 +6,11 @@ import { ReservaRapida } from "../components/ReservaRapida";
 import { brand } from "../constants/brand";
 import { getCourtImage } from "../constants/courtImages";
 import {
-  listarModalidadesReserva,
-  listarQuadrasReserva,
   registrarVisualizacaoDadosReserva,
   registrarVisualizacaoMarcacaoReserva,
-} from "../features/booking/services/bookingService";
+} from "../services/analyticsService";
+import { listarModalidades } from "../services/modalidadeService";
+import { listarQuadras } from "../services/quadraService";
 
 function statusDaQuadra(status) {
   const statuses = {
@@ -97,8 +97,8 @@ export default function ReservaPage() {
 
       try {
         const [quadrasApi, modalidadesApi] = await Promise.all([
-          listarQuadrasReserva(),
-          listarModalidadesReserva(),
+          listarQuadras(),
+          listarModalidades(),
         ]);
 
         if (!active) return;

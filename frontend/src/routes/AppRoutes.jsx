@@ -1,9 +1,17 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Home from "../pages/Home";
+import AdminClientes from "../pages/AdminClientes";
+import AdminComunicados from "../pages/AdminComunicados";
+import AdminDashboard from "../pages/AdminDashboard";
+import AdminHorarios from "../pages/AdminHorarios";
+import AdminLogin from "../pages/AdminLogin";
+import AdminModalidades from "../pages/AdminModalidades";
+import AdminQuadras from "../pages/AdminQuadras";
+import AdminRelatorios from "../pages/AdminRelatorios";
+import AdminReservas from "../pages/AdminReservas";
 import PrivateRoute from "./PrivateRoute";
 import PagamentoRetorno from "../pages/PagamentoRetorno";
 import ReservaPage from "../pages/ReservaPage";
-import { AdminLogin, AdminPanel } from "../pages/admin/AdminPanel";
 
 function protectedPage(page) {
   return <PrivateRoute>{page}</PrivateRoute>;
@@ -19,14 +27,14 @@ export default function AppRoutes() {
         <Route path="/pagamento/retorno" element={<PagamentoRetorno />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={protectedPage(<AdminPanel route="dashboard" />)} />
-        <Route path="/admin/reservas" element={protectedPage(<AdminPanel route="reservas" />)} />
-        <Route path="/admin/quadras" element={protectedPage(<AdminPanel route="quadras" />)} />
-        <Route path="/admin/modalidades" element={protectedPage(<AdminPanel route="modalidades" />)} />
-        <Route path="/admin/horarios" element={protectedPage(<AdminPanel route="horarios" />)} />
-        <Route path="/admin/clientes" element={protectedPage(<AdminPanel route="clientes" />)} />
-        <Route path="/admin/comunicados" element={protectedPage(<AdminPanel route="comunicados" />)} />
-        <Route path="/admin/relatorios" element={protectedPage(<AdminPanel route="relatorios" />)} />
+        <Route path="/admin/dashboard" element={protectedPage(<AdminDashboard />)} />
+        <Route path="/admin/reservas" element={protectedPage(<AdminReservas />)} />
+        <Route path="/admin/quadras" element={protectedPage(<AdminQuadras />)} />
+        <Route path="/admin/modalidades" element={protectedPage(<AdminModalidades />)} />
+        <Route path="/admin/horarios" element={protectedPage(<AdminHorarios />)} />
+        <Route path="/admin/clientes" element={protectedPage(<AdminClientes />)} />
+        <Route path="/admin/comunicados" element={protectedPage(<AdminComunicados />)} />
+        <Route path="/admin/relatorios" element={protectedPage(<AdminRelatorios />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
