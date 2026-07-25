@@ -10,7 +10,9 @@ const links = [
   { label: "Contato", href: "#contato" },
 ];
 
-export function Header() {
+const reservationHash = "#quadras-disponiveis";
+
+export function Header({ onReserve }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -22,6 +24,23 @@ export function Header() {
   }, []);
 
   const closeMenu = () => setMenuOpen(false);
+  const handleReserveClick = (event) => {
+    closeMenu();
+
+    if (!onReserve) return;
+
+    event.preventDefault();
+    onReserve();
+  };
+
+  const handleNavClick = (event, href) => {
+    if (href === reservationHash) {
+      handleReserveClick(event);
+      return;
+    }
+
+    closeMenu();
+  };
 
   return (
     <header className={`site-header ${scrolled ? "site-header--scrolled" : ""}`}>
@@ -38,14 +57,18 @@ export function Header() {
         aria-label="Navegação principal"
       >
         {links.map((link) => (
-          <a key={link.label} href={link.href} onClick={closeMenu}>
+          <a
+            key={link.label}
+            href={link.href}
+            onClick={(event) => handleNavClick(event, link.href)}
+          >
             {link.label}
           </a>
         ))}
         <a
           className="button button--primary site-nav__mobile-cta"
-          href="#quadras-disponiveis"
-          onClick={closeMenu}
+          href={reservationHash}
+          onClick={handleReserveClick}
         >
           <span>Reservar agora</span>
         </a>
@@ -53,7 +76,8 @@ export function Header() {
 
       <a
         className="button button--primary site-header__cta"
-        href="#quadras-disponiveis"
+        href={reservationHash}
+        onClick={handleReserveClick}
       >
         <span>Reservar quadra</span>
       </a>

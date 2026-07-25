@@ -95,8 +95,18 @@ export function PublicSite() {
     const element = document.getElementById(sectionId);
     if (!element) return;
 
+    const scrollPaddingTop =
+      Number.parseFloat(
+        window.getComputedStyle(document.documentElement).scrollPaddingTop,
+      ) || 0;
+    const targetTop =
+      element.getBoundingClientRect().top + window.scrollY - scrollPaddingTop;
+
     window.history.pushState(null, "", hash);
-    element.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.scrollTo({
+      top: Math.max(targetTop, 0),
+      behavior: "smooth",
+    });
   };
 
   const scrollToCourtStory = () => scrollToSection("quadras", "#quadras");
@@ -108,7 +118,7 @@ export function PublicSite() {
   return (
     <>
       <PageIntro />
-      <Header />
+      <Header onReserve={scrollToBookingCards} />
       <ScrollFadeUp watchKey={fadeUpWatchKey} />
       <main>
         <HeroSection
