@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
-import Admin from "../models/Admin.js";
+import { buscarPorId } from "../modules/auth/auth.repository.js";
+import { ADMIN_STATUS } from "../shared/constants/statusAdministrativos.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
 
@@ -11,9 +12,9 @@ export const autenticarAdministrador = executarAssincrono(async (req, _res, next
 
   const token = cabecalho.slice(7).trim();
   const dados = jwt.verify(token, process.env.JWT_SECRET);
-  const administrador = await Admin.findByPk(Number(dados.sub));
+  const administrador = await buscarPorId(Number(dados.sub));
 
-  if (!administrador || administrador.status !== "ativo") {
+  if (!administrador || administrador.status !== ADMIN_STATUS.ATIVO) {
     throw new ErroDaAplicacao("Administrador não autorizado.", 401);
   }
 

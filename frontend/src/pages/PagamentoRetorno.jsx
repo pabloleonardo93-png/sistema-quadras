@@ -3,32 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BrandMark } from "../components/BrandMark";
 import { buscarStatusReserva } from "../services/reservaService";
-
-const statusText = {
-  aguardando_pagamento: "Aguardando pagamento",
-  confirmada: "Reserva confirmada",
-  cancelada: "Reserva cancelada",
-  expirada: "Reserva expirada",
-  finalizada: "Reserva finalizada",
-};
-
-const paymentText = {
-  pendente: "Pagamento pendente",
-  aprovado: "Pagamento aprovado",
-  recusado: "Pagamento recusado",
-  cancelado: "Pagamento cancelado",
-  estornado: "Pagamento estornado",
-};
-
-function formatRemainingTime(milliseconds) {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
+import { PAGAMENTO_STATUS, PAGAMENTO_STATUS_NAO_CONFIRMADOS, labelPagamentoStatusRetorno } from "../shared/constants/pagamentoStatus";
+import { RESERVA_STATUS, labelReservaStatusRetorno } from "../shared/constants/reservaStatus";
+import { formatRemainingTime } from "../shared/formatters/tempo";
 
 function visualState(status, paymentStatus) {
-  if (status === "cancelada" || status === "expirada" || ["recusado", "cancelado", "estornado"].includes(paymentStatus)) {
+  if (
+    status === RESERVA_STATUS.CANCELADA ||
+    status === RESERVA_STATUS.EXPIRADA ||
+    PAGAMENTO_STATUS_NAO_CONFIRMADOS.includes(paymentStatus)
+  ) {
     return {
       icon: AlertCircle,
       title: "Pagamento nao confirmado.",
@@ -37,7 +21,7 @@ function visualState(status, paymentStatus) {
     };
   }
 
-  if (status === "confirmada" || paymentStatus === "aprovado") {
+  if (status === RESERVA_STATUS.CONFIRMADA || paymentStatus === PAGAMENTO_STATUS.APROVADO) {
     return {
       icon: CheckCircle2,
       title: "Pagamento recebido.",
@@ -92,7 +76,7 @@ export default function PagamentoRetorno() {
   }, [reservaId]);
 
   useEffect(() => {
-    if (!reserva?.pagamentoExpiraEm || reserva.status !== "aguardando_pagamento") {
+    if (!reserva?.pagamentoExpiraEm || reserva.status !== RESERVA_STATUS.AGUARDANDO_PAGAMENTO) {
       return undefined;
     }
 
@@ -108,7 +92,7 @@ export default function PagamentoRetorno() {
   const restanteMs = reserva?.pagamentoExpiraEm
     ? new Date(reserva.pagamentoExpiraEm).getTime() - now
     : 0;
-  const deveMostrarPrazo = reserva?.status === "aguardando_pagamento" && reserva?.pagamentoExpiraEm;
+  const deveMostrarPrazo = reserva?.status === RESERVA_STATUS.AGUARDANDO_PAGAMENTO && reserva?.pagamentoExpiraEm;
 
   return (
     <main className="payment-return">
@@ -141,8 +125,8 @@ export default function PagamentoRetorno() {
                 {reserva?.data} as {String(reserva?.horaInicio || "").slice(0, 5)}
               </strong>
               <small>
-                {statusText[reserva?.status] || reserva?.status} /{" "}
-                {paymentText[reserva?.pagamentoStatus] || reserva?.pagamentoStatus}
+                {labelReservaStatusRetorno(reserva?.status) || reserva?.status} /{" "}
+                {labelPagamentoStatusRetorno(reserva?.pagamentoStatus) || reserva?.pagamentoStatus}
               </small>
               {deveMostrarPrazo && (
                 <em>

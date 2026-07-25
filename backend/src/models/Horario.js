@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
+import { HORARIO_STATUS, HORARIO_STATUS_LISTA } from "../shared/constants/statusAdministrativos.js";
 import { opcoesComuns } from "./opcoesComuns.js";
 
 const Horario = sequelize.define("Horario", {
@@ -7,7 +8,7 @@ const Horario = sequelize.define("Horario", {
   data: { type: DataTypes.DATEONLY, allowNull: false },
   horaInicio: { type: DataTypes.TIME, allowNull: false, field: "hora_inicio" },
   horaFim: { type: DataTypes.TIME, allowNull: false, field: "hora_fim" },
-  status: { type: DataTypes.ENUM("disponivel", "reservado", "bloqueado"), allowNull: false, defaultValue: "disponivel" },
+  status: { type: DataTypes.ENUM(...HORARIO_STATUS_LISTA), allowNull: false, defaultValue: HORARIO_STATUS.DISPONIVEL },
 }, {
   ...opcoesComuns,
   tableName: "horarios",

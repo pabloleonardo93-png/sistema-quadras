@@ -1,5 +1,9 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
+import {
+  VERIFICACAO_EMAIL_STATUS,
+  VERIFICACAO_EMAIL_STATUS_LISTA,
+} from "../shared/constants/verificacaoEmailStatus.js";
 import { opcoesComuns } from "./opcoesComuns.js";
 
 const VerificacaoEmail = sequelize.define("VerificacaoEmail", {
@@ -7,9 +11,9 @@ const VerificacaoEmail = sequelize.define("VerificacaoEmail", {
   codigoHash: { type: DataTypes.STRING(128), allowNull: false, field: "codigo_hash" },
   tokenHash: { type: DataTypes.STRING(128), allowNull: true, unique: true, field: "token_hash" },
   status: {
-    type: DataTypes.ENUM("pendente", "validado", "expirado", "bloqueado"),
+    type: DataTypes.ENUM(...VERIFICACAO_EMAIL_STATUS_LISTA),
     allowNull: false,
-    defaultValue: "pendente",
+    defaultValue: VERIFICACAO_EMAIL_STATUS.PENDENTE,
   },
   tentativas: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   envios: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },

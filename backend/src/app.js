@@ -3,7 +3,7 @@ import path from "node:path";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import { diretorioUploads } from "./middlewares/uploadMiddleware.js";
+import { diretorioUploads } from "./modules/arquivos/arquivo.upload.js";
 import { rotaNaoEncontrada, tratarErro } from "./middlewares/errorMiddleware.js";
 import "./models/index.js";
 import routes from "./routes/index.js";
