@@ -83,6 +83,22 @@ services:
     ports:
       - "${FRONTEND_BIND:-127.0.0.1:8080}:80"
 
+  wud:
+    image: getwud/wud:8.3.0
+    container_name: pe-na-areia-wud
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      WUD_WATCHER_LOCAL_CRON: ${WUD_WATCHER_LOCAL_CRON:-*/2 * * * *}
+      WUD_WATCHER_LOCAL_WATCHBYDEFAULT: "false"
+      WUD_TRIGGER_DOCKER_LOCAL_PRUNE: ${WUD_TRIGGER_DOCKER_LOCAL_PRUNE:-true}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${WUD_BIND:-127.0.0.1:3000}:3000"
+
 volumes:
   postgres_data:
   backend_uploads:
