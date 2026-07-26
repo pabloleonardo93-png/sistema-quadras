@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { brand } from "../constants/brand";
+import { removeInitialBootIntro } from "../utils/initialBootIntro";
 import "./PageIntro.css";
 
 let introPlayedThisLoad = false;
 
-const INTRO_LOGO_SRC = "/images/logo/logo-pe-na-areia-header-legivel.png";
+const INTRO_LOGO_SRC = "/images/logo/logo-pe-na-areia-header-white.png";
 const HERO_BACKGROUND_SRC = "/images/hero-beach-tennis-raquete.png";
 const MIN_LOGO_VISIBLE_MS = 380;
 const INTRO_EXIT_DURATION_MS = 860;
@@ -75,15 +76,29 @@ export function PageIntro() {
   const [visible, setVisible] = useState(shouldPlayIntro);
   const [exiting, setExiting] = useState(false);
 
+  useLayoutEffect(() => {
+    if (!visible) {
+      removeInitialBootIntro();
+      return undefined;
+    }
+
+    const root = document.documentElement;
+    introPlayedThisLoad = true;
+    root.classList.add("site-intro-active");
+    removeInitialBootIntro();
+
+    return () => {
+      root.classList.remove("site-intro-active");
+    };
+  }, [visible]);
+
   useEffect(() => {
     if (!visible) return undefined;
 
     let active = true;
     let removeTimer;
-    const root = document.documentElement;
-    introPlayedThisLoad = true;
-    root.classList.add("site-intro-active");
 
+    ensureImagePreload(INTRO_LOGO_SRC);
     ensureImagePreload(HERO_BACKGROUND_SRC);
 
     const logoReady = preloadImage(INTRO_LOGO_SRC, {
@@ -105,7 +120,6 @@ export function PageIntro() {
       removeTimer = window.setTimeout(() => {
         if (!active) return;
 
-        root.classList.remove("site-intro-active");
         setVisible(false);
       }, INTRO_EXIT_DURATION_MS);
     }
@@ -115,7 +129,6 @@ export function PageIntro() {
     return () => {
       active = false;
       window.clearTimeout(removeTimer);
-      root.classList.remove("site-intro-active");
     };
   }, [visible]);
 
@@ -142,6 +155,9 @@ export function PageIntro() {
         <img
           src={INTRO_LOGO_SRC}
           alt=""
+          width="1120"
+          height="260"
+          loading="eager"
           decoding="sync"
           fetchPriority="high"
         />

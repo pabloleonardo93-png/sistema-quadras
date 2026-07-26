@@ -27,7 +27,7 @@
     <link
       rel="preload"
       as="image"
-      href="/images/logo/logo-pe-na-areia-header-legivel.png"
+      href="/images/logo/logo-pe-na-areia-header-white.png"
       fetchpriority="high"
     />
     <link
@@ -40,6 +40,22 @@
     <style>
       html,
       body {
+        background: #0f1320;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+      }
+
+      #root {
+        min-height: 100vh;
+        min-height: 100dvh;
         background: #0f1320;
       }
 
@@ -59,26 +75,34 @@
         place-items: center;
         overflow: hidden;
         background: #0f1320;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
 
       .boot-intro img {
         width: clamp(180px, 18vw, 260px);
         height: auto;
-        filter: brightness(0) invert(1);
+        max-width: calc(100vw - 48px);
+        aspect-ratio: 1120 / 260;
+        object-fit: contain;
+        opacity: 1;
+        transform: none;
       }
     </style>
   </head>
-  <body>
-    <div id="root">
-      <div class="boot-intro" aria-hidden="true">
-        <img
-          src="/images/logo/logo-pe-na-areia-header-legivel.png"
-          alt=""
-          decoding="sync"
-          fetchpriority="high"
-        />
-      </div>
+  <body class="boot-intro-active">
+    <div class="boot-intro" id="initial-boot-intro" aria-hidden="true">
+      <img
+        src="/images/logo/logo-pe-na-areia-header-white.png"
+        alt=""
+        width="1120"
+        height="260"
+        loading="eager"
+        decoding="sync"
+        fetchpriority="high"
+      />
     </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
