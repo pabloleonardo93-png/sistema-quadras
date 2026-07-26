@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { brand } from "../constants/brand";
+import "./PageIntro.css";
 
 let introPlayedThisLoad = false;
 
 const INTRO_LOGO_SRC = "/images/logo/logo-pe-na-areia-header-legivel.png";
 const HERO_BACKGROUND_SRC = "/images/hero-beach-tennis-raquete.png";
-const MIN_LOGO_VISIBLE_MS = 1000;
-const INTRO_EXIT_DURATION_MS = 1320;
+const MIN_LOGO_VISIBLE_MS = 380;
+const INTRO_EXIT_DURATION_MS = 860;
 
 function shouldPlayIntro() {
   if (typeof window === "undefined") return false;
@@ -127,9 +128,8 @@ export function PageIntro() {
       aria-label={`Carregando ${brand.name}`}
     >
       <div className="site-intro__grid" aria-hidden="true">
-        <span className="site-intro__background" />
         <div className="site-intro__tiles">
-          {Array.from({ length: 8 }, (_, index) => index + 1).map((tile) => (
+          {Array.from({ length: 6 }, (_, index) => index + 1).map((tile) => (
             <span
               className={`site-intro__tile site-intro__tile--${tile}`}
               key={tile}

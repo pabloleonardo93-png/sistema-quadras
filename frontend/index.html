@@ -24,6 +24,18 @@
       href="/images/logo/logo-pe-na-areia-favicon-blue.png?v=20260718-3"
     />
     <meta name="theme-color" content="#192b88" />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/logo/logo-pe-na-areia-header-legivel.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/hero-beach-tennis-raquete.png"
+      fetchpriority="high"
+    />
     <title>Pé na Areia | Sua próxima partida começa aqui</title>
     <style>
       html,
@@ -38,10 +50,35 @@
         background: #0f1320;
         content: "";
       }
+
+      .boot-intro {
+        position: fixed;
+        z-index: 100;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #0f1320;
+      }
+
+      .boot-intro img {
+        width: clamp(180px, 18vw, 260px);
+        height: auto;
+        filter: brightness(0) invert(1);
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-intro" aria-hidden="true">
+        <img
+          src="/images/logo/logo-pe-na-areia-header-legivel.png"
+          alt=""
+          decoding="sync"
+          fetchpriority="high"
+        />
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

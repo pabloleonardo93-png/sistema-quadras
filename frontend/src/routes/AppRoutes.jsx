@@ -11,6 +11,7 @@ import AdminRelatorios from "../pages/AdminRelatorios";
 import AdminReservas from "../pages/AdminReservas";
 import PrivateRoute from "./PrivateRoute";
 import PagamentoRetorno from "../pages/PagamentoRetorno";
+import PrivacyCookiesPage from "../pages/PrivacyCookiesPage";
 import ReservaPage from "../pages/ReservaPage";
 
 function protectedPage(page) {
@@ -25,6 +26,7 @@ export default function AppRoutes() {
         <Route path="/reserva" element={<ReservaPage />} />
         <Route path="/reserva/dados" element={<ReservaPage />} />
         <Route path="/pagamento/retorno" element={<PagamentoRetorno />} />
+        <Route path="/privacidade-e-cookies" element={<PrivacyCookiesPage />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={protectedPage(<AdminDashboard />)} />

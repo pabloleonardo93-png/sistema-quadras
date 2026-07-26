@@ -1,4 +1,5 @@
 import api, { API_BASE_URL } from "../api/api";
+import { hasAnalyticsConsent } from "./cookieConsentService";
 
 const VISITOR_STORAGE_KEY = "pe_na_areia_visitante_id";
 const RESERVATION_VIEW_PREFIX = "pe_na_areia_reserva_view:";
@@ -52,6 +53,8 @@ function endpointAcessos() {
 }
 
 export function registrarEventoAcesso(pagina, caminho) {
+  if (!hasAnalyticsConsent()) return;
+
   const payload = JSON.stringify(dadosAcesso({ pagina, caminho }));
 
   if (navigator.sendBeacon) {
@@ -69,6 +72,8 @@ export function registrarEventoAcesso(pagina, caminho) {
 }
 
 export async function registrarAcessoPagina(pagina, caminho) {
+  if (!hasAnalyticsConsent()) return null;
+
   try {
     return await api.post("/relatorios/acessos", dadosAcesso({ pagina, caminho }));
   } catch {
@@ -77,6 +82,8 @@ export async function registrarAcessoPagina(pagina, caminho) {
 }
 
 export function registrarVisualizacaoPagina(pagina, caminho) {
+  if (!hasAnalyticsConsent()) return;
+
   const viewPath = caminho || caminhoAtual();
   const key = `${RESERVATION_VIEW_PREFIX}${pagina}:${viewPath}`;
 

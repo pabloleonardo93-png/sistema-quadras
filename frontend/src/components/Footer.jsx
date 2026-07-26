@@ -92,7 +92,7 @@ export function Footer() {
         <div className="page-shell footer__base-inner">
           <span>© 2026 {brand.name}. Todos os direitos reservados.</span>
           <span className="footer__legal">
-            <span>Política de Privacidade</span>
+            <a href="/privacidade-e-cookies">Privacidade e Cookies</a>
             <i aria-hidden="true" />
             <span>Termos de Uso</span>
           </span>

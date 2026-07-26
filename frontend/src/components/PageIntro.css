@@ -1,0 +1,129 @@
+html.site-intro-active,
+html.site-intro-active body {
+  overflow: hidden;
+}
+
+.site-intro {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--green-900);
+  color: var(--white);
+}
+
+.site-intro__grid,
+.site-intro__tiles {
+  position: absolute;
+  inset: 0;
+}
+
+.site-intro__grid {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.site-intro__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.site-intro__tile {
+  background: var(--green-900);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.site-intro__brand {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  gap: 16px;
+}
+
+.site-intro__brand img {
+  width: clamp(180px, 18vw, 260px);
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.site-intro__brand span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.site-intro--exiting {
+  background: transparent;
+  pointer-events: none;
+}
+
+.site-intro--exiting .site-intro__tile {
+  will-change: transform;
+  animation-duration: 680ms;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.site-intro--exiting .site-intro__tile--1,
+.site-intro--exiting .site-intro__tile--2,
+.site-intro--exiting .site-intro__tile--3 {
+  animation-name: siteIntroPanelUp;
+}
+
+.site-intro--exiting .site-intro__tile--4,
+.site-intro--exiting .site-intro__tile--5,
+.site-intro--exiting .site-intro__tile--6 {
+  animation-name: siteIntroPanelDown;
+}
+
+.site-intro--exiting .site-intro__tile--1,
+.site-intro--exiting .site-intro__tile--4 {
+  animation-delay: 0ms;
+}
+
+.site-intro--exiting .site-intro__tile--2,
+.site-intro--exiting .site-intro__tile--5 {
+  animation-delay: 80ms;
+}
+
+.site-intro--exiting .site-intro__tile--3,
+.site-intro--exiting .site-intro__tile--6 {
+  animation-delay: 160ms;
+}
+
+.site-intro--exiting .site-intro__brand {
+  animation: siteIntroBrandExit 180ms ease-out forwards;
+}
+
+@keyframes siteIntroPanelUp {
+  to {
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+@keyframes siteIntroPanelDown {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes siteIntroBrandExit {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -16px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-intro--exiting .site-intro__tile,
+  .site-intro--exiting .site-intro__brand {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}

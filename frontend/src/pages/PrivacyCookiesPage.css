@@ -1,0 +1,129 @@
+.privacy-page {
+  min-height: 100vh;
+  padding: 48px 0 96px;
+  background: var(--sand-75);
+}
+
+.privacy-page__shell {
+  width: min(860px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.privacy-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-700);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.privacy-page__hero {
+  margin: 72px 0 48px;
+}
+
+.privacy-page__eyebrow {
+  color: var(--green-700);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.privacy-page h1,
+.privacy-page h2,
+.privacy-page h3,
+.privacy-page p {
+  margin: 0;
+}
+
+.privacy-page h1 {
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: 0.88;
+}
+
+.privacy-page__hero p {
+  max-width: 62ch;
+  margin-top: 20px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.privacy-page__section {
+  border-top: 1px solid var(--line);
+  padding: 30px 0;
+}
+
+.privacy-page__section > p {
+  max-width: 70ch;
+  margin-top: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.privacy-page__section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green-700);
+}
+
+.privacy-page__section h2 {
+  color: var(--ink);
+  font-size: 1.16rem;
+}
+
+.privacy-page__storage-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.privacy-page__storage-item {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  background: var(--white);
+}
+
+.privacy-page__storage-item h3 {
+  font-size: 0.96rem;
+}
+
+.privacy-page__storage-item p {
+  max-width: 60ch;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.privacy-page__storage-item span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: color-mix(in srgb, var(--green-700) 10%, var(--white));
+  color: var(--green-700);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .privacy-page {
+    padding-top: 28px;
+  }
+
+  .privacy-page__hero {
+    margin: 52px 0 34px;
+  }
+
+  .privacy-page__storage-item {
+    flex-direction: column;
+  }
+}
