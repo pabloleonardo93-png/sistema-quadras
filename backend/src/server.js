@@ -10,6 +10,9 @@ async function iniciarServidor() {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET não foi configurada.");
     }
+    if (process.env.NODE_ENV === "production" && !process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
+      throw new Error("MERCADO_PAGO_WEBHOOK_SECRET deve ser configurada em producao.");
+    }
     await sequelize.authenticate();
     iniciarExpiradorReservasPendentes();
     app.listen(porta, () => {

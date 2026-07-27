@@ -30,7 +30,7 @@ export async function criarOuAtualizarClienteValidado({
   enderecoIp = null,
 }) {
   const emailNormalizado = validarEmail(email);
-  limitarTentativasDadosCliente({ email: emailNormalizado, telefone, enderecoIp });
+  await limitarTentativasDadosCliente({ email: emailNormalizado, telefone, enderecoIp });
 
   const dados = {
     nome: validarTexto(nome, "Nome", 120),

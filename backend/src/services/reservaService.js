@@ -8,6 +8,7 @@ import Reserva from "../models/Reserva.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import { hojeLocal, validarId } from "../utils/validacoes.js";
 import { registrarLog } from "./logService.js";
+import { limitarOperacaoPersistente } from "./limitePersistenteService.js";
 
 export const inclusoesReserva = [
   { model: Cliente, as: "cliente" },
@@ -55,6 +56,17 @@ export async function criarReserva({
 }) {
   try {
     return await sequelize.transaction(async (transaction) => {
+      if (!adminId) {
+        await limitarOperacaoPersistente({
+          operacao: "reserva",
+          identificadores: [
+            ...(emailVerificado?.verificacaoId ? [{ tipo: "sessao", valor: emailVerificado.verificacaoId }] : []),
+            ...(emailVerificado?.email ? [{ tipo: "email", valor: emailVerificado.email }] : []),
+            ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : []),
+          ],
+          transaction,
+        });
+      }
       const cliente = await Cliente.findByPk(validarId(clienteId, "Cliente"), { transaction });
       if (!cliente || cliente.status !== "ativo") {
         throw new ErroDaAplicacao("Cliente não encontrado ou inativo.", 409);

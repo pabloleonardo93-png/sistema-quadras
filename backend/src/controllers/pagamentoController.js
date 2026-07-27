@@ -60,7 +60,11 @@ export const criarPagamentoMercadoPago = executarAssincrono(async (req, res) => 
   try {
     ({ reserva, criouReservaNesteFluxo } = await obterOuCriarReservaParaPagamento(req));
 
-    const resultado = await criarCheckoutDaReserva({ reservaId: reserva.id });
+    const resultado = await criarCheckoutDaReserva({
+      reservaId: reserva.id,
+      emailVerificado: req.emailVerificado,
+      enderecoIp: req.ip,
+    });
     res.status(201).json({
       mensagem: "Pagamento criado com sucesso.",
       reserva: resultado.reserva,
@@ -86,7 +90,11 @@ export const criarPixMercadoPago = executarAssincrono(async (req, res) => {
   try {
     ({ reserva, criouReservaNesteFluxo } = await obterOuCriarReservaParaPagamento(req));
 
-    const resultado = await criarPixDaReserva({ reservaId: reserva.id });
+    const resultado = await criarPixDaReserva({
+      reservaId: reserva.id,
+      emailVerificado: req.emailVerificado,
+      enderecoIp: req.ip,
+    });
     res.status(201).json({
       mensagem: "Pix criado com sucesso.",
       reserva: resultado.reserva,
@@ -101,7 +109,11 @@ export const criarPixMercadoPago = executarAssincrono(async (req, res) => {
 });
 
 export const criarCheckoutReserva = executarAssincrono(async (req, res) => {
-  const resultado = await criarCheckoutDaReserva({ reservaId: req.params.id });
+  const resultado = await criarCheckoutDaReserva({
+    reservaId: req.params.id,
+    emailVerificado: req.emailVerificado,
+    enderecoIp: req.ip,
+  });
   res.status(201).json({
     mensagem: "Checkout criado com sucesso.",
     reserva: resultado.reserva,
@@ -126,6 +138,6 @@ export const webhookMercadoPago = executarAssincrono(async (req, res) => {
     signature: req.headers["x-signature"],
   });
 
-  const resultado = await processarWebhookMercadoPago({ paymentId });
-  return res.status(200).json({ recebido: true, ...resultado });
+  await processarWebhookMercadoPago({ paymentId });
+  return res.status(200).json({ recebido: true });
 });

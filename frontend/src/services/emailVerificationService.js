@@ -2,46 +2,20 @@ import api from "../api/api";
 
 const EMAIL_VERIFICATION_TOKEN_KEY = "peNaAreiaEmailVerificationToken";
 
-function obterTokenSalvo() {
-  try {
-    return localStorage.getItem(EMAIL_VERIFICATION_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function obterTokenVerificacaoEmail() {
-  return obterTokenSalvo();
-}
-
-function salvarToken(token) {
-  if (!token) return;
-  try {
-    localStorage.setItem(EMAIL_VERIFICATION_TOKEN_KEY, token);
-  } catch {
-    // O cookie HttpOnly continua sendo a fonte principal da sessao.
-  }
-}
-
+// Limpa a versao legada da sessao: a autorizacao atual existe apenas no cookie HttpOnly.
 export function limparSessaoEmailSalva() {
   try {
     localStorage.removeItem(EMAIL_VERIFICATION_TOKEN_KEY);
   } catch {
-    // Sem acao: alguns navegadores podem bloquear armazenamento local.
+    // Alguns navegadores podem bloquear armazenamento local.
   }
 }
 
+limparSessaoEmailSalva();
+
 export async function buscarSessaoEmail() {
-  const token = obterTokenSalvo();
-  const sessao = await api.get("/verificacao-email/sessao", undefined, {
-    auth: false,
-    headers: token ? { "X-Email-Verification-Token": token } : {},
-  });
-
-  if (!sessao?.verificado) {
-    limparSessaoEmailSalva();
-  }
-
+  const sessao = await api.get("/verificacao-email/sessao", undefined, { auth: false });
+  if (!sessao?.verificado) limparSessaoEmailSalva();
   return sessao;
 }
 
@@ -50,11 +24,15 @@ export async function solicitarCodigoEmail(email) {
 }
 
 export async function confirmarCodigoEmail(email, codigo) {
-  const response = await api.post(
-    "/verificacao-email/confirmar",
-    { email, codigo },
-    { auth: false },
-  );
-  salvarToken(response?.token);
+  const response = await api.post("/verificacao-email/confirmar", { email, codigo }, { auth: false });
+  limparSessaoEmailSalva();
   return response;
+}
+
+export async function encerrarSessaoEmail() {
+  try {
+    await api.post("/verificacao-email/encerrar", {}, { auth: false });
+  } finally {
+    limparSessaoEmailSalva();
+  }
 }

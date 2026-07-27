@@ -7,7 +7,7 @@ const VerificacaoEmail = sequelize.define("VerificacaoEmail", {
   codigoHash: { type: DataTypes.STRING(128), allowNull: false, field: "codigo_hash" },
   tokenHash: { type: DataTypes.STRING(128), allowNull: true, unique: true, field: "token_hash" },
   status: {
-    type: DataTypes.ENUM("pendente", "validado", "expirado", "bloqueado"),
+    type: DataTypes.ENUM("pendente", "validado", "expirado", "bloqueado", "revogado"),
     allowNull: false,
     defaultValue: "pendente",
   },

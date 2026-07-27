@@ -6,7 +6,7 @@ import Reserva from "../models/Reserva.js";
 import { registrarLog } from "./logService.js";
 
 export function dadosExpiracaoPagamento(reserva) {
-  const pagamentoExpiraEm = calcularPagamentoExpiraEm(reserva?.pagamentoCriadoEm);
+  const pagamentoExpiraEm = reserva?.pagamentoExpiraEm || calcularPagamentoExpiraEm(reserva?.pagamentoCriadoEm);
   return {
     pagamentoExpiraEm: pagamentoExpiraEm?.toISOString() || null,
   };
@@ -21,7 +21,10 @@ export async function expirarReservasPendentes({ agora = new Date(), limite = 10
       where: {
         status: "aguardando_pagamento",
         pagamentoStatus: "pendente",
-        pagamentoCriadoEm: { [Op.ne]: null, [Op.lte]: corte },
+        [Op.or]: [
+          { pagamentoExpiraEm: { [Op.ne]: null, [Op.lte]: agora } },
+          { pagamentoExpiraEm: null, pagamentoCriadoEm: { [Op.ne]: null, [Op.lte]: corte } },
+        ],
       },
       limit: limite,
       order: [["pagamentoCriadoEm", "ASC"]],
@@ -47,7 +50,7 @@ export async function expirarReservasPendentes({ agora = new Date(), limite = 10
         detalhes: {
           motivo: "pagamento_nao_aprovado_no_prazo",
           pagamentoCriadoEm: reserva.pagamentoCriadoEm,
-          pagamentoExpiraEm: calcularPagamentoExpiraEm(reserva.pagamentoCriadoEm)?.toISOString() || null,
+          pagamentoExpiraEm: dadosExpiracaoPagamento(reserva).pagamentoExpiraEm,
         },
         transaction,
       });

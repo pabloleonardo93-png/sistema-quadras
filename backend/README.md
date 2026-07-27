@@ -75,6 +75,9 @@ EMAIL_VERIFICATION_RESEND_SECONDS=60
 EMAIL_VERIFICATION_RATE_WINDOW_MINUTES=60
 EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL=5
 EMAIL_VERIFICATION_MAX_SENDS_PER_IP=30
+EMAIL_VERIFICATION_TOKEN_TTL_MINUTES=30
+EMAIL_VERIFICATION_MAX_CONFIRM_ATTEMPTS_PER_WINDOW=10
+EMAIL_VERIFICATION_CONFIRM_RATE_WINDOW_MINUTES=60
 TRUST_PROXY_HOPS=2
 ~~~
 
@@ -86,6 +89,11 @@ Limites de envio do codigo de verificacao:
 - **EMAIL_VERIFICATION_RATE_WINDOW_MINUTES**: duracao da janela usada para contar envios recentes;
 - **EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL**: maximo de envios para o mesmo e-mail dentro da janela;
 - **EMAIL_VERIFICATION_MAX_SENDS_PER_IP**: maximo de envios para o mesmo IP dentro da janela.
+- **EMAIL_VERIFICATION_TOKEN_TTL_MINUTES**: duracao da sessao HttpOnly de e-mail verificado; o padrao seguro e 30 minutos e o cookie expira no mesmo instante do registro no banco.
+- **EMAIL_VERIFICATION_MAX_CONFIRM_ATTEMPTS_PER_WINDOW** e **EMAIL_VERIFICATION_CONFIRM_RATE_WINDOW_MINUTES**: limitam confirmacoes de codigo por e-mail/IP em contadores persistentes no PostgreSQL.
+- **CLIENTE_DADOS_***, **RESERVA_CREATE_*** e **PAGAMENTO_CREATE_***: limites persistentes para dados de cliente, criacao de reserva e inicio de pagamento. Os padroes estao em `.env.example`.
+
+Em producao, **MERCADO_PAGO_WEBHOOK_SECRET** e obrigatoria. O backend nao inicia sem ela e cada webhook valida assinatura, valor, moeda BRL, referencia externa e tentativa persistida antes de alterar uma reserva.
 
 Quando a API estiver atras do Nginx da VPS e do Nginx do container, configure **TRUST_PROXY_HOPS=2** para o Express usar o IP real do cliente em `req.ip`. Valores ausentes ou invalidos voltam para `0`, sem confiar em `X-Forwarded-For`. O Nginx publico da VPS deve sobrescrever `X-Forwarded-For` com `$remote_addr`; nao use `$proxy_add_x_forwarded_for` na borda publica, pois isso preserva valores enviados pelo navegador.
 
@@ -192,7 +200,8 @@ A senha nunca é retornada pela API.
 ### Verificacao de e-mail da reserva
 
 - **POST /api/verificacao-email/enviar**: envia um codigo de 6 digitos para o e-mail informado;
-- **POST /api/verificacao-email/confirmar**: valida o codigo e retorna um JWT temporario da verificacao.
+- **POST /api/verificacao-email/confirmar**: valida o codigo e cria uma sessao temporaria em cookie HttpOnly.
+- **POST /api/verificacao-email/encerrar**: revoga a sessao atual de verificacao e remove o cookie.
 
 ~~~json
 {
@@ -210,7 +219,7 @@ A senha nunca é retornada pela API.
 O codigo vale por 10 minutos, tem limite de tentativas e fica salvo apenas como hash. O JWT temporario deve ser enviado nas rotas que criam reserva pelo header:
 
 ~~~text
-X-Email-Verification-Token: TOKEN_DA_VERIFICACAO
+O navegador envia automaticamente o cookie HttpOnly da verificacao. O token nao e retornado no JSON, nao e salvo no localStorage e nao deve ser enviado por header ou corpo.
 ~~~
 
 O backend usa o e-mail de dentro desse token para criar ou atualizar o cliente da reserva. A chave **RESEND_API_KEY** fica somente no backend.
@@ -261,8 +270,8 @@ O backend usa o e-mail de dentro desse token para criar ou atualizar o cliente d
 ### Reservas
 
 - **POST /api/reservas**: público, exige JWT temporario de e-mail validado;
-- **POST /api/reservas/:id/pagamento**: público, cria checkout do Mercado Pago com o valor da reserva;
-- **GET /api/reservas/:id/status**: público, retorna status resumido da reserva e do pagamento;
+- **POST /api/reservas/:id/pagamento**: cria checkout somente para a sessao verificada proprietaria da reserva;
+- **GET /api/reservas/:id/status**: retorna status resumido somente para a sessao verificada proprietaria da reserva;
 - **GET /api/reservas**: administrador;
 - **GET /api/reservas/:id**: administrador;
 - **PATCH /api/reservas/:id/confirmar**: administrador;
@@ -296,7 +305,7 @@ MERCADO_PAGO_ACCESS_TOKEN=seu_access_token_do_mercado_pago
 APP_PUBLIC_URL=http://localhost:5173
 API_PUBLIC_URL=http://localhost:3000
 MERCADO_PAGO_WEBHOOK_URL=https://seu-dominio.com/api/webhooks/mercadopago
-MERCADO_PAGO_WEBHOOK_SECRET=segredo_do_webhook_se_configurado
+MERCADO_PAGO_WEBHOOK_SECRET=segredo_do_webhook_obrigatorio_em_producao
 ~~~
 
 Status de reservas:
@@ -314,7 +323,7 @@ Status de pagamentos:
 - `cancelado`;
 - `estornado`.
 
-Cada reserva possui `valorTotal`, `pagamentoStatus`, `mercadoPagoPreferenceId`, `mercadoPagoPaymentId`, `pagamentoUrl`, `pagamentoCriadoEm` e `pagoEm`. Para Pix direto, o backend define `date_of_expiration` com o mesmo prazo configurado em `RESERVA_PAGAMENTO_TEMPO_MINUTOS`. Quando o Mercado Pago retorna pagamento aprovado, a reserva passa para **confirmada** e o pagamento para **aprovado**. Se o pagamento for cancelado, recusado, estornado ou expirar, a reserva é cancelada ou expirada e o horário volta a ficar disponível.
+Cada reserva possui `valorTotal`, `pagamentoStatus`, identificadores do Mercado Pago e uma tentativa persistida de pagamento. Pix e checkout reutilizam a tentativa pendente dentro do prazo, com chave de idempotencia estavel por reserva, tipo e tentativa. O webhook consulta o pagamento diretamente no Mercado Pago e confere assinatura, valor, moeda BRL, referencia externa, tipo e tentativa antes de confirmar a reserva.
 
 ### Comunicados
 

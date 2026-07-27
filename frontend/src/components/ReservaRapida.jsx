@@ -22,6 +22,7 @@ import { buscarMeuCliente } from "../services/clienteService";
 import {
   buscarSessaoEmail,
   confirmarCodigoEmail,
+  encerrarSessaoEmail,
   limparSessaoEmailSalva,
   solicitarCodigoEmail,
 } from "../services/emailVerificationService";
@@ -162,6 +163,7 @@ export function ReservaRapida({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [isEmailConfirming, setIsEmailConfirming] = useState(false);
+  const [isEmailClosing, setIsEmailClosing] = useState(false);
   const [isEmailSessionLoading, setIsEmailSessionLoading] = useState(false);
   const [emailSessionChecked, setEmailSessionChecked] = useState(false);
   const [customerProfileLoaded, setCustomerProfileLoaded] = useState(false);
@@ -548,7 +550,6 @@ export function ReservaRapida({
       const response = await confirmarCodigoEmail(emailVerification.email, emailVerification.code);
       setVerifiedEmail({
         email: response.email,
-        token: response.token,
         tokenExpiraEm: response.tokenExpiraEm,
         validadoEm: response.validadoEm,
       });
@@ -567,12 +568,21 @@ export function ReservaRapida({
     }
   };
 
-  const handleChangeVerifiedEmail = () => {
+  const handleChangeVerifiedEmail = async () => {
     resetPaymentState();
-    setEmailSessionChecked(true);
-    limparSessaoEmailSalva();
-    resetEmailVerification(verifiedEmail?.email || customer.email);
-    setCustomer((current) => ({ ...current, email: "" }));
+    setIsEmailClosing(true);
+    setError("");
+    try {
+      await encerrarSessaoEmail();
+      setEmailSessionChecked(true);
+      limparSessaoEmailSalva();
+      resetEmailVerification(verifiedEmail?.email || customer.email);
+      setCustomer((current) => ({ ...current, email: "" }));
+    } catch (requestError) {
+      setError(requestError.message || "Nao foi possivel encerrar a verificacao de e-mail.");
+    } finally {
+      setIsEmailClosing(false);
+    }
   };
 
   const handleEmailVerificationSubmit = (event) => {
@@ -713,8 +723,6 @@ export function ReservaRapida({
       const payload = {
         nome: customer.name,
         telefone: customer.phone,
-        email: customer.email,
-        emailVerificationToken: verifiedEmail.token || undefined,
         quadraId: selectedCourtData.apiId,
         modalidadeId: selectedModalityData.apiId,
         horarioId: selectedHorario.apiId,
@@ -1302,7 +1310,7 @@ export function ReservaRapida({
                             <Lock aria-hidden="true" size={18} />
                           </span>
                         </label>
-                        <button type="button" onClick={handleChangeVerifiedEmail}>
+                        <button type="button" onClick={handleChangeVerifiedEmail} disabled={isEmailClosing}>
                           Trocar e-mail
                         </button>
                       </div>

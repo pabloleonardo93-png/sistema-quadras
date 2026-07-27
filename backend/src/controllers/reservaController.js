@@ -43,7 +43,9 @@ export const statusPublico = executarAssincrono(async (req, res) => {
   const reserva = await Reserva.findByPk(validarId(req.params.id, "Reserva"), {
     include: inclusoesReserva,
   });
-  if (!reserva) throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
+  if (!reserva || reserva.cliente?.email !== req.emailVerificado.email) {
+    throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
+  }
   res.json({
     reserva: {
       id: reserva.id,

@@ -4,7 +4,7 @@ const TENTATIVAS_PADRAO = 5;
 const MINUTOS_PADRAO_JANELA = 60;
 const ENVIOS_PADRAO_EMAIL = 5;
 const ENVIOS_PADRAO_IP = 30;
-const DIAS_PADRAO_SESSAO = 90;
+const MINUTOS_PADRAO_SESSAO = 30;
 
 function numeroPositivo(valor, fallback) {
   const numero = Number(valor);
@@ -42,15 +42,12 @@ export const maxEnviosPorIp = numeroPositivo(
   ENVIOS_PADRAO_IP,
 );
 
-export const sessaoEmailValidadeDias = numeroPositivo(
-  process.env.EMAIL_VERIFICATION_SESSION_DAYS,
-  DIAS_PADRAO_SESSAO,
-);
-
 export const tokenEmailValidadeMinutos = numeroPositivo(
   process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES,
-  sessaoEmailValidadeDias * 24 * 60,
+  MINUTOS_PADRAO_SESSAO,
 );
+
+export const sessaoEmailValidadeDias = tokenEmailValidadeMinutos / (24 * 60);
 
 export const provedorVerificacaoEmail = (
   process.env.EMAIL_VERIFICATION_PROVIDER ||

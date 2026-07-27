@@ -2,8 +2,10 @@ import { Router } from "express";
 import * as controller from "../controllers/clienteController.js";
 import { autenticarAdministrador } from "../middlewares/authMiddleware.js";
 import { validarEmailVerificado } from "../middlewares/validarEmailVerificado.js";
+import validarOrigemMutavel from "../middlewares/validarOrigemMutavel.js";
 
 const router = Router();
+router.use(validarOrigemMutavel);
 router.get("/me", validarEmailVerificado, controller.perfilVerificado);
 router.post("/", validarEmailVerificado, controller.criar);
 router.use(autenticarAdministrador);

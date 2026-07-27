@@ -5,6 +5,7 @@ import test, { after, before, beforeEach, mock } from "node:test";
 import { Op } from "sequelize";
 
 process.env.JWT_SECRET = "segredo-de-teste-para-rate-limit";
+process.env.NODE_ENV = "test";
 process.env.TRUST_PROXY_HOPS = "2";
 process.env.EMAIL_VERIFICATION_PROVIDER = "mock";
 process.env.EMAIL_VERIFICATION_RESEND_SECONDS = "60";
@@ -14,13 +15,16 @@ process.env.EMAIL_VERIFICATION_MAX_SENDS_PER_IP = "3";
 
 const { default: app } = await import("../src/app.js");
 const { default: VerificacaoEmail } = await import("../src/models/VerificacaoEmail.js");
+const { default: sequelize } = await import("../src/config/database.js");
 const { normalizarTrustProxyHops } = await import("../src/config/proxy.js");
+const { confirmarCodigoEmail, criarHashVerificacao } = await import("../src/services/verificacaoEmailService.js");
 
 let server;
 let baseUrl;
 let proximoId = 1;
 let enviosEmail = 0;
 const verificacoes = [];
+const limitesPersistentes = new Map();
 
 function valorComparavel(valor) {
   return valor instanceof Date ? valor.getTime() : valor;
@@ -67,6 +71,7 @@ function resetarVerificacoes() {
   verificacoes.length = 0;
   proximoId = 1;
   enviosEmail = 0;
+  limitesPersistentes.clear();
 }
 
 async function postEnviar({ email, forwardedFor }) {
@@ -133,6 +138,15 @@ before(async () => {
 
     verificacoes.push(registro);
     return registro;
+  });
+
+  mock.method(sequelize, "transaction", async (callback) => callback({ LOCK: { UPDATE: "UPDATE" } }));
+  mock.method(sequelize, "query", async (_sql, { replacements }) => {
+    const chave = `${replacements.chave}:${new Date(replacements.inicioJanela).getTime()}`;
+    const quantidade = limitesPersistentes.get(chave) || 0;
+    if (quantidade >= replacements.limite) return [];
+    limitesPersistentes.set(chave, quantidade + 1);
+    return [{ quantidade: quantidade + 1 }];
   });
 
   server = app.listen(0, "127.0.0.1");
@@ -254,6 +268,36 @@ test("nao chama o envio de e-mail quando a requisicao recebe 429", async () => {
 
   assert.equal(respostaBloqueada.status, 429);
   assert.equal(enviosEmail, chamadasAntesDoBloqueio);
+});
+
+test("tentativas simultaneas do codigo respeitam o limite atomico", async () => {
+  const verificacao = {
+    id: proximoId,
+    email: "concorrencia@example.com",
+    codigoHash: criarHashVerificacao("123456"),
+    status: "pendente",
+    tentativas: 0,
+    expiraEm: new Date(Date.now() + 60_000),
+    criadoEm: new Date(),
+    update: async (valores) => {
+      Object.assign(verificacao, valores);
+      return verificacao;
+    },
+  };
+  verificacoes.push(verificacao);
+
+  const resultados = await Promise.all(
+    Array.from({ length: 8 }, () => confirmarCodigoEmail({
+      email: verificacao.email,
+      codigo: "000000",
+      enderecoIp: "198.51.100.90",
+    }).then(() => "ok", (erro) => erro.status)),
+  );
+
+  assert.equal(verificacao.tentativas, 5);
+  assert.equal(verificacao.status, "bloqueado");
+  assert.equal(resultados.includes("ok"), false);
+  assert.equal(resultados.filter((status) => status === 429).length >= 1, true);
 });
 
 test("valores invalidos de TRUST_PROXY_HOPS nao habilitam confianca irrestrita", () => {

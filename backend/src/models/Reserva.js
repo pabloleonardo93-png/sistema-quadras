@@ -29,6 +29,12 @@ const Reserva = sequelize.define("Reserva", {
   mercadoPagoStatusDetail: { type: DataTypes.STRING(120), allowNull: true, field: "mercado_pago_status_detail" },
   pagamentoUrl: { type: DataTypes.STRING(800), allowNull: true, field: "pagamento_url" },
   pagamentoCriadoEm: { type: DataTypes.DATE, allowNull: true, field: "pagamento_criado_em" },
+  pagamentoExpiraEm: { type: DataTypes.DATE, allowNull: true, field: "pagamento_expira_em" },
+  pagamentoTipo: { type: DataTypes.STRING(20), allowNull: true, field: "pagamento_tipo" },
+  pagamentoTentativa: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: "pagamento_tentativa" },
+  pagamentoIdempotenciaChave: { type: DataTypes.STRING(180), allowNull: true, unique: true, field: "pagamento_idempotencia_chave" },
+  pixCopiaECola: { type: DataTypes.TEXT, allowNull: true, field: "pix_copia_e_cola" },
+  pixQrCodeBase64: { type: DataTypes.TEXT, allowNull: true, field: "pix_qr_code_base64" },
   pagoEm: { type: DataTypes.DATE, allowNull: true, field: "pago_em" },
   observacoes: { type: DataTypes.TEXT, allowNull: true },
 }, {

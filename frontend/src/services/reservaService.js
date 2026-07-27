@@ -1,21 +1,14 @@
 import api from "../api/api";
 import { criarCliente } from "./clienteService";
-import { obterTokenVerificacaoEmail } from "./emailVerificationService";
-
-function headersDeVerificacaoEmail(token) {
-  const tokenFinal = token || obterTokenVerificacaoEmail();
-  return tokenFinal ? { "X-Email-Verification-Token": tokenFinal } : {};
-}
 
 export async function listarReservas(params) {
   const response = await api.get("/reservas", params);
   return response.reservas || [];
 }
 
-export async function criarReserva(dados, emailVerificationToken) {
+export async function criarReserva(dados) {
   const response = await api.post("/reservas", dados, {
     auth: false,
-    headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
 }
@@ -25,7 +18,6 @@ export async function criarReservaPublica(dados) {
     nome: dados.nome,
     telefone: dados.telefone,
     email: dados.email,
-    emailVerificationToken: dados.emailVerificationToken,
   });
 
   return criarReserva({
@@ -34,21 +26,19 @@ export async function criarReservaPublica(dados) {
     modalidadeId: dados.modalidadeId,
     horarioId: dados.horarioId,
     observacoes: dados.observacoes,
-  }, dados.emailVerificationToken);
+  });
 }
 
-export async function criarPagamentoMercadoPago(dados, emailVerificationToken) {
+export async function criarPagamentoMercadoPago(dados) {
   const response = await api.post("/pagamentos/mercadopago/criar", dados, {
     auth: false,
-    headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
 }
 
-export async function criarPixMercadoPago(dados, emailVerificationToken) {
+export async function criarPixMercadoPago(dados) {
   const response = await api.post("/pagamentos/mercadopago/pix/criar", dados, {
     auth: false,
-    headers: headersDeVerificacaoEmail(emailVerificationToken),
   });
   return response;
 }
@@ -61,7 +51,7 @@ export async function criarReservaPublicaComPagamento(dados) {
     modalidadeId: dados.modalidadeId,
     horarioId: dados.horarioId,
     observacoes: dados.observacoes,
-  }, dados.emailVerificationToken);
+  });
 }
 
 export async function criarReservaPublicaComPix(dados) {
@@ -72,7 +62,7 @@ export async function criarReservaPublicaComPix(dados) {
     modalidadeId: dados.modalidadeId,
     horarioId: dados.horarioId,
     observacoes: dados.observacoes,
-  }, dados.emailVerificationToken);
+  });
 }
 
 export async function criarPagamentoReserva(id) {

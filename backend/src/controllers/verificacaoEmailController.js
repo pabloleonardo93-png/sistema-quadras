@@ -1,36 +1,13 @@
-import {
-  emailVerificacaoCookieMaxAgeMs,
-  emailVerificacaoCookieNome,
-} from "../config/verificacaoEmail.js";
+import { emailVerificacaoCookieNome } from "../config/verificacaoEmail.js";
 import {
   confirmarCodigoEmail,
+  revogarTokenTemporarioEmail,
   solicitarCodigoEmail,
   validarTokenTemporarioEmail,
 } from "../services/verificacaoEmailService.js";
 import { extrairTokenVerificacaoEmail } from "../utils/emailVerificationToken.js";
+import { limparCookieVerificacao, opcoesCookieVerificacao } from "../utils/emailVerificationCookie.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
-
-function usarCookieSeguro(req) {
-  const preferencia = process.env.EMAIL_VERIFICATION_COOKIE_SECURE;
-  if (preferencia === "true") return true;
-  if (preferencia === "false") return false;
-
-  return (
-    process.env.NODE_ENV === "production" ||
-    req.secure ||
-    req.headers["x-forwarded-proto"] === "https"
-  );
-}
-
-function opcoesCookieVerificacao(req) {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: usarCookieSeguro(req),
-    maxAge: emailVerificacaoCookieMaxAgeMs,
-    path: "/",
-  };
-}
 
 export const solicitarCodigo = executarAssincrono(async (req, res) => {
   const resultado = await solicitarCodigoEmail({
@@ -49,32 +26,44 @@ export const confirmarCodigo = executarAssincrono(async (req, res) => {
   const resultado = await confirmarCodigoEmail({
     email: req.body.email,
     codigo: req.body.codigo || req.body.code,
+    enderecoIp: req.ip,
   });
 
   res.cookie(emailVerificacaoCookieNome, resultado.token, opcoesCookieVerificacao(req));
 
   res.json({
     mensagem: "E-mail validado com sucesso.",
-    ...resultado,
+    email: resultado.email,
+    validadoEm: resultado.validadoEm,
+    tokenExpiraEm: resultado.tokenExpiraEm,
   });
 });
 
 export const obterSessao = executarAssincrono(async (req, res) => {
   const token = extrairTokenVerificacaoEmail(req);
   if (!token) {
-    return res.json({ verificado: false });
+    return res.set("Cache-Control", "no-store").set("Pragma", "no-cache").json({ verificado: false });
   }
 
   try {
     const sessao = await validarTokenTemporarioEmail({ token });
-    return res.json({
+    return res.set("Cache-Control", "no-store").set("Pragma", "no-cache").json({
       verificado: true,
       email: sessao.email,
       validadoEm: sessao.validadoEm,
       tokenExpiraEm: sessao.tokenExpiraEm,
     });
   } catch {
-    res.clearCookie(emailVerificacaoCookieNome, { path: "/" });
-    return res.json({ verificado: false });
+    limparCookieVerificacao(res, req);
+    return res.set("Cache-Control", "no-store").set("Pragma", "no-cache").json({ verificado: false });
   }
+});
+
+export const encerrarSessao = executarAssincrono(async (req, res) => {
+  const token = extrairTokenVerificacaoEmail(req);
+  if (token) {
+    await revogarTokenTemporarioEmail({ token }).catch(() => {});
+  }
+  limparCookieVerificacao(res, req);
+  res.status(204).end();
 });

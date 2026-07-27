@@ -5,6 +5,7 @@ import Cliente from "./Cliente.js";
 import Comunicado from "./Comunicado.js";
 import Horario from "./Horario.js";
 import LogSistema from "./LogSistema.js";
+import LimiteSeguranca from "./LimiteSeguranca.js";
 import Modalidade from "./Modalidade.js";
 import Quadra from "./Quadra.js";
 import QuadraModalidade from "./QuadraModalidade.js";
@@ -32,4 +33,4 @@ Reserva.belongsTo(Horario, { foreignKey: "horarioId", as: "horario" });
 Quadra.belongsToMany(Modalidade, { through: QuadraModalidade, foreignKey: "quadraId", otherKey: "modalidadeId", as: "modalidades" });
 Modalidade.belongsToMany(Quadra, { through: QuadraModalidade, foreignKey: "modalidadeId", otherKey: "quadraId", as: "quadras" });
 
-export { AcessoPagina, Admin, Arquivo, Cliente, Comunicado, Horario, LogSistema, Modalidade, Quadra, QuadraModalidade, Reserva, VerificacaoEmail };
+export { AcessoPagina, Admin, Arquivo, Cliente, Comunicado, Horario, LimiteSeguranca, LogSistema, Modalidade, Quadra, QuadraModalidade, Reserva, VerificacaoEmail };
