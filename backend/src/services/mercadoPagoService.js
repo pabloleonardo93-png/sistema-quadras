@@ -66,10 +66,15 @@ export function validarAssinaturaWebhookMercadoPago({ paymentId, requestId, sign
 
 async function chamarMercadoPago(caminho, opcoes = {}) {
   if (!accessToken()) throw new ErroDaAplicacao("Mercado Pago nao configurado.", 503);
-  const resposta = await fetch(`${MERCADO_PAGO_API}${caminho}`, {
-    ...opcoes,
-    headers: { Authorization: `Bearer ${accessToken()}`, "Content-Type": "application/json", ...(opcoes.headers || {}) },
-  });
+  let resposta;
+  try {
+    resposta = await fetch(`${MERCADO_PAGO_API}${caminho}`, {
+      ...opcoes,
+      headers: { Authorization: `Bearer ${accessToken()}`, "Content-Type": "application/json", ...(opcoes.headers || {}) },
+    });
+  } catch {
+    throw new ErroDaAplicacao("Nao foi possivel criar ou consultar o pagamento.", 502);
+  }
   const texto = await resposta.text();
   let dados = null;
   try { dados = texto ? JSON.parse(texto) : null; } catch { /* resposta invalida do provedor */ }
@@ -206,6 +211,14 @@ function chaveIdempotencia(reserva, tipo, tentativa) {
   return `reserva-${reserva.id}-${tipo}-${tentativa}`;
 }
 
+function proximaTentativaPagamento(reserva) {
+  const tentativaAtual = Number(reserva.pagamentoTentativa || 0);
+  if (!Number.isSafeInteger(tentativaAtual) || tentativaAtual < 0) {
+    return 1;
+  }
+  return tentativaAtual + 1;
+}
+
 export async function criarCheckoutDaReserva({ reservaId, emailVerificado, enderecoIp = null }) {
   return sequelize.transaction(async (transaction) => {
     await limitarOperacaoPersistente({
@@ -218,7 +231,7 @@ export async function criarCheckoutDaReserva({ reservaId, emailVerificado, ender
     const existente = respostaAtiva(reserva, "checkout");
     if (existente) return existente;
 
-    const tentativa = reserva.pagamentoTentativa + 1;
+    const tentativa = proximaTentativaPagamento(reserva);
     const idempotencia = chaveIdempotencia(reserva, "checkout", tentativa);
     const criadoEm = new Date();
     const expiraEm = calcularPagamentoExpiraEm(criadoEm);
@@ -259,7 +272,7 @@ export async function criarPixDaReserva({ reservaId, emailVerificado, enderecoIp
     const existente = respostaAtiva(reserva, "pix");
     if (existente) return existente;
 
-    const tentativa = reserva.pagamentoTentativa + 1;
+    const tentativa = proximaTentativaPagamento(reserva);
     const idempotencia = chaveIdempotencia(reserva, "pix", tentativa);
     const criadoEm = new Date();
     const expiraEm = calcularPagamentoExpiraEm(criadoEm);
@@ -326,4 +339,4 @@ export function anexarExpiracaoPagamento(reserva) {
   return { ...dadosExpiracaoPagamento(reserva), tempoPagamentoMinutos };
 }
 
-export { dadosReservaPagamento, valorEmCentavos, webhookConfereComReserva };
+export { dadosReservaPagamento, proximaTentativaPagamento, valorEmCentavos, webhookConfereComReserva };

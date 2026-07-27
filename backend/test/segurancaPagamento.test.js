@@ -4,6 +4,7 @@ import test from "node:test";
 process.env.MERCADO_PAGO_WEBHOOK_SECRET = "segredo-de-teste-webhook";
 
 const {
+  proximaTentativaPagamento,
   validarAssinaturaWebhookMercadoPago,
   valorEmCentavos,
   webhookConfereComReserva,
@@ -19,6 +20,13 @@ test("normaliza valores monetarios sem aceitar formatos ambiguos", () => {
   assert.equal(valorEmCentavos("85,5"), 8550);
   assert.equal(valorEmCentavos("85.009"), null);
   assert.equal(valorEmCentavos("abc"), null);
+});
+
+test("calcula tentativa de pagamento sem gerar valor invalido", () => {
+  assert.equal(proximaTentativaPagamento({}), 1);
+  assert.equal(proximaTentativaPagamento({ pagamentoTentativa: null }), 1);
+  assert.equal(proximaTentativaPagamento({ pagamentoTentativa: 0 }), 1);
+  assert.equal(proximaTentativaPagamento({ pagamentoTentativa: 2 }), 3);
 });
 
 test("webhook exige referencia, valor, moeda, tipo e tentativa da reserva", () => {
