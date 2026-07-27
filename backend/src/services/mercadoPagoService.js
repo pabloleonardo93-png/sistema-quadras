@@ -176,15 +176,34 @@ function dadosReservaPagamento(reserva) {
 }
 
 async function carregarReservaDaSessao({ reservaId, email, transaction, lock = false }) {
-  const reserva = await Reserva.findByPk(validarId(reservaId, "Reserva"), {
-    include: inclusoesReserva,
+  const id = validarId(reservaId, "Reserva");
+  const reservaBloqueada = await Reserva.findByPk(id, {
     transaction,
     lock: lock ? transaction.LOCK.UPDATE : undefined,
+  });
+  if (!reservaBloqueada) {
+    throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
+  }
+
+  const reserva = await Reserva.findByPk(id, {
+    include: inclusoesReserva,
+    transaction,
   });
   if (!reserva || validarEmail(reserva.cliente?.email || "") !== validarEmail(email)) {
     throw new ErroDaAplicacao("Reserva nao encontrada.", 404);
   }
   return reserva;
+}
+
+async function carregarReservaDoWebhook({ reservaId, transaction }) {
+  const id = validarId(reservaId, "Reserva");
+  const reservaBloqueada = await Reserva.findByPk(id, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  if (!reservaBloqueada) return null;
+
+  return Reserva.findByPk(id, { include: inclusoesReserva, transaction });
 }
 
 function validarReservaParaPagamento(reserva) {
@@ -312,7 +331,7 @@ export async function processarWebhookMercadoPago({ paymentId }) {
   if (!/^\d+$/.test(referencia)) return { processado: false };
 
   return sequelize.transaction(async (transaction) => {
-    const reserva = await Reserva.findByPk(Number(referencia), { include: inclusoesReserva, transaction, lock: transaction.LOCK.UPDATE });
+    const reserva = await carregarReservaDoWebhook({ reservaId: Number(referencia), transaction });
     if (!reserva || !webhookConfereComReserva({ pagamento, reserva })) return { processado: false };
     if (["cancelada", "expirada", "finalizada"].includes(reserva.status)) return { processado: false };
 
