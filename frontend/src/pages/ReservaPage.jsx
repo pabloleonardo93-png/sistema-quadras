@@ -136,7 +136,7 @@ export default function ReservaPage() {
           <a className="brand brand--reservation brand--image" href="/#inicio" aria-label={`${brand.name}, início`}>
             <img
               className="brand__logo-image"
-              src="/images/logo/logo-pe-na-areia-header-legivel.png"
+              src="/images/logo/logo-pe-na-areia-header-white.png"
               alt={brand.name}
             />
           </a>

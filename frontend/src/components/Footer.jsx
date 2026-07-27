@@ -21,7 +21,7 @@ export function Footer() {
         <section className="footer__brand" aria-label={brand.name}>
           <a className="footer__brand-link" href="/#inicio">
             <img
-              src="/images/logo/logo-pe-na-areia-favicon-blue.png"
+              src="/images/logo/logo-pe-na-areia-favicon-white.png"
               alt=""
               aria-hidden="true"
             />

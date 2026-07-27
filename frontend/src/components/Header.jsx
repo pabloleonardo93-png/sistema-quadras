@@ -47,7 +47,7 @@ export function Header({ onReserve }) {
       <a className="brand brand--image" href="#inicio" aria-label={`${brand.name}, início`}>
         <img
           className="brand__logo-image"
-          src="/images/logo/logo-pe-na-areia-header-legivel.png"
+          src="/images/logo/logo-pe-na-areia-header-white.png"
           alt={brand.name}
         />
       </a>

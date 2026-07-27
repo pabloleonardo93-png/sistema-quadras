@@ -2,16 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  CalendarDays,
   Archive,
   BarChart3,
   Bell,
   CalendarCheck,
   Check,
+  ChevronDown,
   ChevronRight,
+  CircleCheck,
+  CircleDollarSign,
+  CircleX,
   Clock3,
+  CreditCard,
+  Ellipsis,
   Eye,
   EyeOff,
   Filter,
+  ImagePlus,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
@@ -19,21 +27,51 @@ import {
   Megaphone,
   Menu,
   Moon,
+  Pencil,
   Plus,
+  RotateCw,
   Search,
   ShieldCheck,
   Sun,
   UsersRound,
   LayoutGrid,
+  ReceiptText,
   X,
 } from "lucide-react";
-import { getCourtImage } from "../../constants/courtImages";
 import {
+  DashboardReservationsCard,
+  HourlyOccupancyChart,
+  PaymentsSummaryCard,
+  QuickSummaryCard,
+} from "../../features/admin-insights/components/DashboardInsights";
+import {
+  ConversionFunnel,
+  ModalityPerformanceTable,
+  ReservationsEvolutionCard,
+  StatusReportCard,
+} from "../../features/admin-insights/components/ReportsInsights";
+import { DashboardSkeleton, MetricCard } from "../../features/admin-insights/components/AdminDataViz";
+import {
+  formatCurrency,
+  getPeriodBounds,
+  isSameLocalDate,
+  isWithinBounds,
+  paymentLocalDate,
+  percentageChange,
+  toIsoDate,
+  toLocalDate,
+} from "../../features/admin-insights/utils/insightData";
+import { getCourtImage } from "../../constants/courtImages";
+import { enviarArquivo } from "../../services/arquivoService";
+import {
+  buscarAdministradorAtual,
+  getAdmin,
   login as loginAdmin,
   logout as logoutAdmin,
 } from "../../services/authService";
 import {
   arquivarComunicado,
+  criarComunicado,
   listarComunicados,
   publicarComunicado,
 } from "../../services/comunicadoService";
@@ -43,6 +81,7 @@ import {
 } from "../../services/clienteService";
 import {
   alterarStatusModalidade,
+  atualizarModalidade,
   listarModalidades,
 } from "../../services/modalidadeService";
 import {
@@ -65,8 +104,6 @@ import {
 import {
   buscarDashboard,
   buscarRelatorioFunilReserva,
-  buscarRelatorioModalidades,
-  buscarRelatorioReservas,
 } from "../../services/relatorioService";
 import { brand } from "../../constants/brand";
 
@@ -80,6 +117,8 @@ const navItems = [
   { id: "comunicados", label: "Comunicados", icon: Megaphone },
   { id: "relatorios", label: "Relatórios", icon: BarChart3 },
 ];
+
+const EMPTY_INSIGHT_ITEMS = [];
 
 const pageTitles = {
   dashboard: {
@@ -192,6 +231,39 @@ function obterDataAdmin(data) {
   return Number.isNaN(dataLocal.getTime()) ? null : dataLocal;
 }
 
+function mesmaDataAdmin(dataA, dataB) {
+  return Boolean(dataA && dataB)
+    && dataA.getFullYear() === dataB.getFullYear()
+    && dataA.getMonth() === dataB.getMonth()
+    && dataA.getDate() === dataB.getDate();
+}
+
+function reservaNoPeriodo(data, periodo) {
+  if (!periodo) return true;
+
+  const dataReserva = obterDataAdmin(data);
+  if (!dataReserva) return false;
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  if (periodo === "hoje") return mesmaDataAdmin(dataReserva, hoje);
+  if (periodo === "mes") {
+    return dataReserva.getFullYear() === hoje.getFullYear()
+      && dataReserva.getMonth() === hoje.getMonth();
+  }
+
+  if (periodo === "semana") {
+    const inicioSemana = new Date(hoje);
+    inicioSemana.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7));
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 6);
+    return dataReserva >= inicioSemana && dataReserva <= fimSemana;
+  }
+
+  return true;
+}
+
 function formatarDataISOAdmin(data = new Date()) {
   const ano = data.getFullYear();
   const mes = String(data.getMonth() + 1).padStart(2, "0");
@@ -274,6 +346,7 @@ const cadastroQuadraInicial = {
   descricao: "",
   valorHora: "",
   imagemUrl: "",
+  imagemArquivo: null,
   modalidadesIds: [],
 };
 
@@ -317,6 +390,25 @@ function montarNotificacoesAdmin(reservas = [], quadras = []) {
   ];
 }
 
+function iniciaisAdministrador(nome = "") {
+  const partes = String(nome || "Administrador")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return partes
+    .slice(0, 2)
+    .map((parte) => parte[0])
+    .join("")
+    .toUpperCase() || "AD";
+}
+
+function formatarPerfilAdministrador(permissao = "administrador") {
+  return String(permissao || "administrador")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
 export function AdminPanel({ route = "dashboard" }) {
   const navigateRouter = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -341,12 +433,10 @@ export function AdminPanel({ route = "dashboard" }) {
   return (
     <AdminLayout
       currentRoute={currentRoute}
-      searchQuery={searchQuery}
       sidebarCollapsed={sidebarCollapsed}
       sidebarOpen={sidebarOpen}
       onCloseSidebar={() => setSidebarOpen(false)}
       onNavigate={navigate}
-      onSearchChange={setSearchQuery}
       onToggleSidebar={toggleSidebar}
       onLogout={() => {
         logoutAdmin();
@@ -479,18 +569,18 @@ function AdminLayout({
   onCloseSidebar,
   onLogout,
   onNavigate,
-  onSearchChange,
   onToggleSidebar,
-  searchQuery,
   sidebarCollapsed,
   sidebarOpen,
 }) {
   const currentPage = pageTitles[currentRoute] || pageTitles.dashboard;
-  const searchEnabled = ["reservas", "quadras", "modalidades", "clientes", "comunicados"].includes(currentRoute);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("admin-theme") === "dark");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [adminUser, setAdminUser] = useState(() => getAdmin());
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   const formattedToday = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-BR", {
@@ -499,13 +589,42 @@ function AdminLayout({
         weekday: "short",
       })
         .format(new Date())
-        .replace(/\.$/, ""),
+        .replace(/\.$/, "")
+        .replace(/^./, (letra) => letra.toUpperCase()),
     [],
   );
+  const adminName = adminUser?.nome || "Administrador";
+  const adminProfile = formatarPerfilAdministrador(adminUser?.permissao);
+  const adminInitials = iniciaisAdministrador(adminName);
 
   useEffect(() => {
     localStorage.setItem("admin-theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    buscarAdministradorAtual()
+      .then((administrador) => {
+        if (active && administrador) setAdminUser(administrador);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!userMenuRef.current?.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -538,11 +657,9 @@ function AdminLayout({
         <div className="admin-sidebar__top">
           <a className="admin-logo" href="/">
             <img
-              src="/images/logo/logo-pe-na-areia-favicon-blue.png"
-              alt=""
-              aria-hidden="true"
+              src="/images/logo/logo-pe-na-areia-header-white.png"
+              alt={brand.name}
             />
-            <span>{brand.nameUpper}</span>
           </a>
           <button className="admin-sidebar__close" type="button" onClick={onCloseSidebar}>
             <X aria-hidden="true" />
@@ -579,31 +696,36 @@ function AdminLayout({
 
       <div className="admin-main">
         <header className="admin-header">
-          <button
-            className="admin-header__menu"
-            type="button"
-            aria-label={sidebarCollapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
-            title={sidebarCollapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
-            onClick={onToggleSidebar}
-          >
-            <Menu aria-hidden="true" />
-          </button>
-          <div className="admin-header__copy">
-            <div className="admin-header__kicker">
-              <span>{currentPage.eyebrow}</span>
-              <span>{formattedToday}</span>
+          <div className="admin-header__main">
+            <button
+              className="admin-header__menu"
+              type="button"
+              aria-label={sidebarCollapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
+              title={sidebarCollapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
+              onClick={onToggleSidebar}
+            >
+              <Menu aria-hidden="true" />
+            </button>
+            <div className="admin-header__copy">
+              <div className="admin-header__identity">
+                <div className="admin-header__meta">
+                  <LayoutDashboard aria-hidden="true" size={13} />
+                  <span>{currentPage.eyebrow}</span>
+                  <button
+                    className="admin-header__date"
+                    type="button"
+                    aria-label={`Data atual: ${formattedToday}`}
+                    title={`Data atual: ${formattedToday}`}
+                  >
+                    <span>{formattedToday}</span>
+                  </button>
+                </div>
+                <h1>{currentPage.title}</h1>
+                <p>{currentPage.description}</p>
+              </div>
             </div>
-            <h1>{currentPage.title}</h1>
-            <p>{currentPage.description}</p>
           </div>
           <div className="admin-header__actions" aria-label="Acoes do painel">
-            {searchEnabled && (
-              <SearchInput
-                placeholder="Buscar no painel"
-                value={searchQuery}
-                onChange={onSearchChange}
-              />
-            )}
             <div className="admin-notifications">
               <button
                 type="button"
@@ -655,12 +777,29 @@ function AdminLayout({
                 <Moon aria-hidden="true" size={19} />
               )}
             </button>
-            <div className="admin-user">
-              <span>PO</span>
-              <div>
-                <strong>Pablo</strong>
-                <small>Operador</small>
-              </div>
+            <div className="admin-user-menu" ref={userMenuRef}>
+              <button
+                className="admin-user"
+                type="button"
+                aria-expanded={userMenuOpen}
+                aria-label="Abrir menu da conta"
+                onClick={() => setUserMenuOpen((current) => !current)}
+              >
+                <span>{adminInitials}</span>
+                <div>
+                  <strong>{adminName}</strong>
+                  <small>{adminProfile}</small>
+                </div>
+                <ChevronDown aria-hidden="true" size={15} />
+              </button>
+              {userMenuOpen && (
+                <div className="admin-user-menu__panel" role="menu">
+                  <button type="button" role="menuitem" onClick={onLogout}>
+                    <LogOut aria-hidden="true" size={16} />
+                    Sair da conta
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -679,7 +818,7 @@ function AdminScreen({ route, searchQuery, onNavigate }) {
     horarios: <ScheduleScreen />,
     clientes: <ClientsScreen searchQuery={searchQuery} />,
     comunicados: <AnnouncementsScreen searchQuery={searchQuery} />,
-    relatorios: <ReportsScreen />,
+    relatorios: <ReportsScreen onNavigate={onNavigate} />,
   };
 
   return screens[route] || screens.dashboard;
@@ -688,6 +827,7 @@ function AdminScreen({ route, searchQuery, onNavigate }) {
 function DashboardScreen({ onNavigate }) {
   const [dashboard, setDashboard] = useState(null);
   const [reservas, setReservas] = useState([]);
+  const [horarios, setHorarios] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -696,13 +836,15 @@ function DashboardScreen({ onNavigate }) {
 
     async function carregarDashboard() {
       try {
-        const [dashboardData, reservasData] = await Promise.all([
+        const [dashboardData, reservasData, horariosData] = await Promise.all([
           buscarDashboard(),
           listarReservas(),
+          listarHorarios({ data: toIsoDate() }),
         ]);
         if (!active) return;
         setDashboard(dashboardData);
         setReservas(reservasData);
+        setHorarios(horariosData);
       } catch {
         if (active) setError("Não foi possível carregar os dados do dashboard.");
       } finally {
@@ -717,192 +859,129 @@ function DashboardScreen({ onNavigate }) {
     };
   }, []);
 
-  const stats = dashboard
-    ? [
-        {
-          id: "reservas-dia",
-          label: "Reservas hoje",
-          value: dashboard.reservasHoje,
-          trend: "dados atualizados",
-          tone: "green",
-        },
-        {
-          id: "reservas-semana",
-          label: "Reservas na semana",
-          value: dashboard.reservasSemana,
-          trend: "semana atual",
-          tone: "blue",
-        },
-        {
-          id: "clientes",
-          label: "Clientes",
-          value: dashboard.clientesCadastrados,
-          trend: "base total",
-          tone: "sand",
-        },
-        {
-          id: "quadras",
-          label: "Quadras ativas",
-          value: dashboard.quadrasAtivas,
-          trend: "ativas",
-          tone: "orange",
-        },
-        {
-          id: "horario-top",
-          label: "Horario mais procurado",
-          value: dashboard.horariosMaisProcurados?.[0]?.horaInicio?.slice(0, 5) || "--",
-          trend: "maior volume",
-          tone: "dark",
-        },
-        {
-          id: "ocupacao",
-          label: "Confirmadas",
-          value: dashboard.reservasConfirmadas,
-          trend: `${dashboard.reservasCanceladas || 0} canceladas`,
-          tone: "green",
-        },
-      ]
-    : [];
-
-  const nextReservations = reservas.slice(0, 3).map((reserva) => ({
-    id: reserva.id,
-    customer: reserva.cliente?.nome || "--",
-    court: reserva.quadra?.nome || "--",
-    modality: reserva.modalidade?.nome || "--",
-    date: reserva.data,
-    time: String(reserva.horaInicio || "").slice(0, 5),
-    status: statusReserva(reserva.status),
-  }));
-  const pendingReservations = reservas.filter((item) => item.status === "aguardando_pagamento");
-  const pendingCountLabel = pendingReservations.length
-    ? `${pendingReservations.length} pagamento${pendingReservations.length === 1 ? "" : "s"} aguardando Mercado Pago`
-    : "Nenhuma pendência no Mercado Pago";
-  const pendingDescription = pendingReservations.length
-    ? "A confirmação depende do retorno do Mercado Pago. Abra reservas para conferir o status."
-    : "Quando um pagamento ficar pendente, ele aparece aqui para acompanhamento.";
-  const pendingBadgeLabel = `${pendingReservations.length} pendente${pendingReservations.length === 1 ? "" : "s"}`;
-
-  return (
-    <div className="admin-page">
-      <AdminState
-        error={error}
-        isLoading={isLoading}
-        loadingText="Carregando dashboard..."
-      />
-      <DashboardCards stats={stats} />
-
-      <section className="admin-grid admin-grid--dashboard">
-        <Panel title="Próximas reservas" action="Ver agenda" onAction={() => onNavigate?.("horarios")}>
-          <div className="admin-reservation-list">
-            {nextReservations.map((reservation) => (
-              <ReservationSummary key={reservation.id} reservation={reservation} />
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Mercado Pago" action={pendingBadgeLabel}>
-          <div className="admin-pending-card">
-            <span className="admin-pending-card__icon">
-              <AlertTriangle aria-hidden="true" size={22} />
-            </span>
-            <strong>{pendingCountLabel}</strong>
-            <p>{pendingDescription}</p>
-            <AdminButton onClick={() => onNavigate?.("reservas")}>
-              {pendingReservations.length ? "Revisar pendências" : "Abrir reservas"}
-            </AdminButton>
-          </div>
-        </Panel>
-      </section>
-
-      <section className="admin-grid admin-grid--two">
-        <Panel title="Atalhos rápidos">
-          <QuickActions onNavigate={onNavigate} />
-        </Panel>
-        <Panel title="Avisos importantes">
-          <div className="admin-alerts">
-            <p>
-              <strong>Quadra 03 em manutenção:</strong> bloquear manhã até troca
-              de rede ser concluída.
-            </p>
-            <p>
-              <strong>Alta procura às 19h:</strong> considere liberar pacote de
-              horários noturnos.
-            </p>
-            <p>
-              <strong>Arquivos:</strong> revisar fotos da quadra central antes
-              da próxima campanha.
-            </p>
-          </div>
-        </Panel>
-      </section>
-    </div>
+  const today = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
+  const yesterday = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1), [today]);
+  const reservationsToday = useMemo(
+    () => reservas.filter((reserva) => isSameLocalDate(toLocalDate(reserva.data), today)),
+    [reservas, today],
   );
-}
-
-function DashboardCards({ stats = [] }) {
-  return (
-    <section className="admin-stats">
-      {stats.map((stat) => (
-        <article className={`admin-stat admin-stat--${stat.tone}`} key={stat.id}>
-          <span>{stat.label}</span>
-          <strong>{stat.value}</strong>
-          <small>{stat.trend}</small>
-        </article>
-      ))}
-    </section>
+  const reservationsYesterday = useMemo(
+    () => reservas.filter((reserva) => isSameLocalDate(toLocalDate(reserva.data), yesterday)),
+    [reservas, yesterday],
   );
-}
-
-function QuickActions({ onNavigate }) {
-  const actions = [
-    {
-      label: "Reservas",
-      description: "Agenda",
-      route: "reservas",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Quadras",
-      description: "Estrutura",
-      route: "quadras",
-      icon: LayoutGrid,
-    },
-    {
-      label: "Horários",
-      description: "Bloqueios",
-      route: "horarios",
-      icon: Clock3,
-    },
-    {
-      label: "Avisos",
-      description: "Comunicados",
-      route: "comunicados",
-      icon: Megaphone,
-    },
-    {
-      label: "Relatórios",
-      description: "Indicadores",
-      route: "relatorios",
-      icon: BarChart3,
-    },
+  const pendingReservations = useMemo(
+    () => reservas.filter((reserva) => reserva.status === "aguardando_pagamento" || reserva.pagamentoStatus === "pendente"),
+    [reservas],
+  );
+  const hourlyOccupancy = useMemo(() => {
+    const byHour = new Map();
+    horarios.forEach((horario) => {
+      const label = String(horario.horaInicio || "").slice(0, 5);
+      if (!label) return;
+      const current = byHour.get(label) || { label, reserved: 0, total: 0 };
+      current.total += 1;
+      if (horario.status === "reservado") current.reserved += 1;
+      byHour.set(label, current);
+    });
+    return [...byHour.values()]
+      .sort((first, second) => first.label.localeCompare(second.label))
+      .map((item) => ({ ...item, rate: Math.round((item.reserved / item.total) * 100) }));
+  }, [horarios]);
+  const occupancyToday = horarios.length
+    ? Math.round((horarios.filter((horario) => horario.status === "reservado").length / horarios.length) * 100)
+    : 0;
+  const payments = useMemo(() => {
+    const now = new Date();
+    const isCurrentMonth = (reserva) => {
+      const date = paymentLocalDate(reserva);
+      return Boolean(date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth());
+    };
+    const isPreviousMonth = (reserva) => {
+      const date = paymentLocalDate(reserva);
+      const previous = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return Boolean(date && date.getFullYear() === previous.getFullYear() && date.getMonth() === previous.getMonth());
+    };
+    const sumApproved = (items) => items
+      .filter((reserva) => reserva.pagamentoStatus === "aprovado")
+      .reduce((total, reserva) => total + Number(reserva.valorTotal || 0), 0);
+    const monthRevenue = sumApproved(reservas.filter(isCurrentMonth));
+    const previousRevenue = sumApproved(reservas.filter(isPreviousMonth));
+    return {
+      approvedCount: reservas.filter((reserva) => reserva.pagamentoStatus === "aprovado" && isCurrentMonth(reserva)).length,
+      monthChange: percentageChange(monthRevenue, previousRevenue),
+      monthRevenue,
+      pendingCount: pendingReservations.length,
+    };
+  }, [pendingReservations.length, reservas]);
+  const dashboardMetrics = useMemo(() => {
+    const dailyTrend = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - index));
+      return reservas.filter((reserva) => isSameLocalDate(toLocalDate(reserva.data), date)).length;
+    });
+    const revenueToday = reservas
+      .filter((reserva) => reserva.pagamentoStatus === "aprovado" && isSameLocalDate(paymentLocalDate(reserva), today))
+      .reduce((total, reserva) => total + Number(reserva.valorTotal || 0), 0);
+    const yesterdayRevenue = reservas
+      .filter((reserva) => reserva.pagamentoStatus === "aprovado" && isSameLocalDate(paymentLocalDate(reserva), yesterday))
+      .reduce((total, reserva) => total + Number(reserva.valorTotal || 0), 0);
+    const reservationsChange = percentageChange(reservationsToday.length, reservationsYesterday.length);
+    const revenueChange = percentageChange(revenueToday, yesterdayRevenue);
+    return [
+      { label: "Reservas hoje", value: dashboard?.reservasHoje ?? reservationsToday.length, detail: reservationsChange === null ? "Dados da data atual" : `${reservationsChange >= 0 ? "+" : ""}${reservationsChange}% vs. ontem`, icon: CalendarDays, tone: "blue", sparkline: dailyTrend },
+      { label: "Ocupação hoje", value: horarios.length ? `${occupancyToday}%` : "--", detail: horarios.length ? `${horarios.filter((horario) => horario.status === "reservado").length} de ${horarios.length} horários` : "Sem horários cadastrados", icon: Clock3, tone: "orange", sparkline: hourlyOccupancy.map((item) => item.rate) },
+      { label: "Receita hoje", value: formatCurrency(revenueToday), detail: revenueChange === null ? "Sem base anterior" : `${revenueChange >= 0 ? "+" : ""}${revenueChange}% vs. ontem`, icon: CircleDollarSign, tone: "green", sparkline: dailyTrend.map((value) => value || 0) },
+      { label: "Pendências", value: pendingReservations.length, detail: pendingReservations.length ? "Reservas aguardando pagamento" : "Nenhuma pendência operacional", icon: CircleX, tone: "purple", sparkline: dailyTrend.map((value, index) => Math.max(0, value - index)) },
+    ];
+  }, [dashboard?.reservasHoje, horarios, hourlyOccupancy, occupancyToday, pendingReservations.length, reservas, reservationsToday, reservationsYesterday, today, yesterday]);
+  const nextReservations = useMemo(
+    () => reservas
+      .filter((reserva) => {
+        const date = toLocalDate(reserva.data);
+        return date && date >= today && !["cancelada", "expirada"].includes(reserva.status);
+      })
+      .sort((first, second) => `${first.data} ${first.horaInicio}`.localeCompare(`${second.data} ${second.horaInicio}`))
+      .slice(0, 4),
+    [reservas, today],
+  );
+  const quickSummary = [
+    { id: "reservations", label: "Reservas esta semana", detail: `${dashboard?.reservasSemana ?? 0} no período atual`, route: "reservas", tone: "blue" },
+    { id: "occupancy", label: "Ocupação de hoje", detail: horarios.length ? `${occupancyToday}% dos horários ocupados` : "Sem horários cadastrados", route: "horarios", tone: "orange" },
+    { id: "pending", label: "Pendências operacionais", detail: pendingReservations.length ? `${pendingReservations.length} para revisar` : "Nenhuma pendência", route: "reservas", tone: "purple" },
   ];
 
   return (
-    <div className="admin-quick-actions">
-      {actions.map(({ description, icon: Icon, label, route }) => (
-        <button key={route} type="button" onClick={() => onNavigate?.(route)}>
-          <Icon aria-hidden="true" size={18} />
-          <span>{label}</span>
-          <small>{description}</small>
-          <ChevronRight aria-hidden="true" size={16} />
-        </button>
-      ))}
+    <div className="admin-page admin-page--dashboard">
+      <AdminState
+        error={error}
+        isLoading={false}
+      />
+      {isLoading ? <DashboardSkeleton /> : !error && <>
+        <section className="admin-insight-metrics" aria-label="Indicadores do dashboard">
+          {dashboardMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+        </section>
+        <section className="admin-dashboard-grid">
+          <DashboardReservationsCard reservations={nextReservations} onNavigate={onNavigate} />
+          <div className="admin-dashboard-side"><PaymentsSummaryCard payments={payments} onNavigate={onNavigate} /><QuickSummaryCard items={quickSummary} onNavigate={onNavigate} /></div>
+        </section>
+        <HourlyOccupancyChart items={hourlyOccupancy} />
+      </>}
     </div>
   );
 }
 
 function ReservationsScreen({ searchQuery = "" }) {
   const [reservas, setReservas] = useState([]);
+  const [filtros, setFiltros] = useState({
+    status: "",
+    modalidade: "",
+    pagamento: "",
+    periodo: "",
+    quadra: "",
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState("");
@@ -939,9 +1018,14 @@ function ReservationsScreen({ searchQuery = "" }) {
     }
   };
 
+  const opcoesFiltro = useMemo(() => ({
+    modalidades: [...new Set(reservas.map((reserva) => reserva.modalidade?.nome).filter(Boolean))].sort(),
+    pagamentos: [...new Set(reservas.map((reserva) => reserva.pagamentoStatus).filter(Boolean))].sort(),
+    quadras: [...new Set(reservas.map((reserva) => reserva.quadra?.nome).filter(Boolean))].sort(),
+  }), [reservas]);
+
   const reservasFiltradas = useMemo(() => {
     const termo = normalizarBusca(searchQuery);
-    if (!termo) return reservas;
 
     return reservas.filter((reservation) => {
       const valores = [
@@ -957,47 +1041,137 @@ function ReservationsScreen({ searchQuery = "" }) {
         statusReserva(reservation.status),
         statusPagamento(reservation.pagamentoStatus),
       ];
-      return valores.some((valor) => normalizarBusca(valor).includes(termo));
+      const correspondeBusca = !termo || valores.some((valor) => normalizarBusca(valor).includes(termo));
+      const correspondeStatus = !filtros.status || reservation.status === filtros.status;
+      const correspondeModalidade = !filtros.modalidade || reservation.modalidade?.nome === filtros.modalidade;
+      const correspondeQuadra = !filtros.quadra || reservation.quadra?.nome === filtros.quadra;
+      const correspondePagamento = !filtros.pagamento || reservation.pagamentoStatus === filtros.pagamento;
+      const correspondePeriodo = reservaNoPeriodo(reservation.data, filtros.periodo);
+
+      return correspondeBusca
+        && correspondeStatus
+        && correspondeModalidade
+        && correspondeQuadra
+        && correspondePagamento
+        && correspondePeriodo;
     });
-  }, [reservas, searchQuery]);
+  }, [filtros, reservas, searchQuery]);
+
+  const resumoReservas = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const reservasHoje = reservas.filter((reserva) => mesmaDataAdmin(obterDataAdmin(reserva.data), hoje)).length;
+
+    return reservasFiltradas.reduce(
+      (resumo, reserva) => {
+        resumo.total += 1;
+        resumo[reserva.status] = (resumo[reserva.status] || 0) + 1;
+        return resumo;
+      },
+      {
+        total: 0,
+        confirmada: 0,
+        aguardando_pagamento: 0,
+        cancelada: 0,
+        reservasHoje,
+      },
+    );
+  }, [reservas, reservasFiltradas]);
+
+  const atualizarFiltro = (campo, valor) => {
+    setFiltros((atual) => ({ ...atual, [campo]: valor }));
+  };
 
   return (
     <div className="admin-page admin-page--reservations">
-      <Panel className="admin-panel--reservations" title="Reservas">
-        <AdminState
-          error={error}
-          isLoading={isLoading}
-          empty={!reservasFiltradas.length}
-          loadingText="Carregando reservas..."
-          emptyText={searchQuery ? "Nenhuma reserva encontrada para essa busca." : "Nenhuma reserva encontrada."}
-        />
-        {feedback && <p className="admin-success">{feedback}</p>}
-        {!isLoading && !error && reservasFiltradas.length > 0 && (
+      <AdminState
+        error={error}
+        isLoading={isLoading}
+        empty={!reservas.length}
+        loadingText="Carregando reservas..."
+        emptyText="Nenhuma reserva encontrada."
+      />
+      {feedback && <p className="admin-success">{feedback}</p>}
+      {!isLoading && !error && reservas.length > 0 && (
+        <>
+          <section className="admin-filter-card admin-reservations__filters" aria-label="Filtros de reservas">
+            <AdminFilterField label="Status">
+              <select value={filtros.status} onChange={(event) => atualizarFiltro("status", event.target.value)}>
+                <option value="">Todos os status</option>
+                <option value="confirmada">Confirmada</option>
+                <option value="aguardando_pagamento">Pendente</option>
+                <option value="cancelada">Cancelada</option>
+                <option value="finalizada">Finalizada</option>
+                <option value="expirada">Expirada</option>
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Modalidade">
+              <select value={filtros.modalidade} onChange={(event) => atualizarFiltro("modalidade", event.target.value)}>
+                <option value="">Todas as modalidades</option>
+                {opcoesFiltro.modalidades.map((modalidade) => <option key={modalidade} value={modalidade}>{modalidade}</option>)}
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Quadra">
+              <select value={filtros.quadra} onChange={(event) => atualizarFiltro("quadra", event.target.value)}>
+                <option value="">Todas as quadras</option>
+                {opcoesFiltro.quadras.map((quadra) => <option key={quadra} value={quadra}>{quadra}</option>)}
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Pagamento">
+              <select value={filtros.pagamento} onChange={(event) => atualizarFiltro("pagamento", event.target.value)}>
+                <option value="">Todos os pagamentos</option>
+                {opcoesFiltro.pagamentos.map((pagamento) => <option key={pagamento} value={pagamento}>{statusPagamento(pagamento)}</option>)}
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Período">
+              <select value={filtros.periodo} onChange={(event) => atualizarFiltro("periodo", event.target.value)}>
+                <option value="">Todas as datas</option>
+                <option value="hoje">Hoje</option>
+                <option value="semana">Esta semana</option>
+                <option value="mes">Este mês</option>
+              </select>
+            </AdminFilterField>
+            <button className="admin-filter-card__clear" type="button" onClick={() => setFiltros({ status: "", modalidade: "", pagamento: "", periodo: "", quadra: "" })}>
+              <RotateCw aria-hidden="true" size={15} />
+              Limpar filtros
+            </button>
+          </section>
+
+          <section className="admin-metric-grid" aria-label="Indicadores de reservas">
+            <AdminMetricCard detail="na data atual" icon={CalendarDays} label="Reservas hoje" tone="blue" value={resumoReservas.reservasHoje} />
+            <AdminMetricCard detail="no recorte atual" icon={CircleCheck} label="Confirmadas" tone="green" value={resumoReservas.confirmada} />
+            <AdminMetricCard detail="aguardando pagamento" icon={Clock3} label="Pendentes" tone="orange" value={resumoReservas.aguardando_pagamento} />
+            <AdminMetricCard detail="no recorte atual" icon={CircleX} label="Canceladas" tone="red" value={resumoReservas.cancelada} />
+          </section>
+
+          <Panel action={`${reservasFiltradas.length} registro${reservasFiltradas.length === 1 ? "" : "s"}`} className="admin-panel--reservation-table" title="Lista de reservas">
+            {reservasFiltradas.length === 0 ? (
+              <p className="admin-empty-inline">Nenhuma reserva encontrada para os filtros selecionados.</p>
+            ) : (
           <ResponsiveTable
             className="admin-reservations-table"
             columns={["Cliente", "Quadra", "Modalidade", "Data", "Horário", "Status", "Pagamento", "Ações"]}
           >
             {reservasFiltradas.map((reservation) => (
               <tr key={reservation.id}>
-                <td>
-                  <strong>{reservation.cliente?.nome || "--"}</strong>
-                  <small>{reservation.cliente?.telefone || "--"}</small>
+                <td data-label="Cliente">
+                  <ReservationCustomer customer={reservation.cliente} />
                 </td>
-                <td>{reservation.quadra?.nome || "--"}</td>
-                <td>{reservation.modalidade?.nome || "--"}</td>
-                <td>
+                <td data-label="Quadra">{reservation.quadra?.nome || "--"}</td>
+                <td data-label="Modalidade">{reservation.modalidade?.nome || "--"}</td>
+                <td data-label="Data">
                   <ReservationDate value={reservation.data} />
                 </td>
-                <td>
+                <td data-label="Horário">
                   <span className="admin-time-chip">{formatarHoraAdmin(reservation.horaInicio)}</span>
                 </td>
-                <td>
+                <td data-label="Status">
                   <StatusBadge status={statusReserva(reservation.status)} />
                 </td>
-                <td>
+                <td data-label="Pagamento">
                   <StatusBadge status={statusPagamento(reservation.pagamentoStatus)} />
                 </td>
-                <td>
+                <td data-label="Ações">
                   <ReservationActions
                     reservation={reservation}
                     savingAction={savingAction}
@@ -1007,8 +1181,44 @@ function ReservationsScreen({ searchQuery = "" }) {
               </tr>
             ))}
           </ResponsiveTable>
-        )}
-      </Panel>
+            )}
+          </Panel>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AdminFilterField({ children, label }) {
+  return <label className="admin-filter-field"><span>{label}</span>{children}</label>;
+}
+
+function AdminMetricCard({ detail, icon: Icon, label, tone, value }) {
+  return (
+    <article className={`admin-metric-card admin-metric-card--${tone}`}>
+      <span className="admin-metric-card__icon"><Icon aria-hidden="true" size={18} /></span>
+      <div>
+        <small>{label}</small>
+        <strong>{value}</strong>
+        <em>{detail}</em>
+      </div>
+    </article>
+  );
+}
+
+function ReservationCustomer({ customer }) {
+  const nome = customer?.nome || "--";
+  const avatar = customer?.avatarUrl || customer?.fotoUrl || customer?.foto;
+
+  return (
+    <div className="admin-reservation-customer">
+      <span className="admin-reservation-customer__avatar">
+        {avatar ? <img src={avatar} alt="" /> : iniciaisAdministrador(nome)}
+      </span>
+      <span>
+        <strong>{nome}</strong>
+        <small>{customer?.telefone || customer?.email || "Sem contato informado"}</small>
+      </span>
     </div>
   );
 }
@@ -1058,7 +1268,11 @@ function ReservationActions({ onAction, reservation, savingAction }) {
   }
 
   return (
-    <div className="admin-table-actions admin-table-actions--reservations">
+    <details className="admin-row-menu">
+      <summary aria-label={`Ações da reserva ${reservation.id}`} title="Ações da reserva">
+        <Ellipsis aria-hidden="true" size={18} />
+      </summary>
+      <div className="admin-row-menu__panel">
       {actions.map(({ acao, icon: Icon, id, label, successMessage }) => {
         const key = `${reservation.id}-${id}`;
         const isSaving = savingAction === key;
@@ -1071,14 +1285,18 @@ function ReservationActions({ onAction, reservation, savingAction }) {
             key={id}
             title={`${label} reserva`}
             type="button"
-            onClick={() => onAction({ acao, id: reservation.id, key, successMessage })}
+            onClick={(event) => {
+              event.currentTarget.closest("details")?.removeAttribute("open");
+              onAction({ acao, id: reservation.id, key, successMessage });
+            }}
           >
             <Icon aria-hidden="true" size={15} />
             <span>{isSaving ? "Salvando..." : label}</span>
           </button>
         );
       })}
-    </div>
+      </div>
+    </details>
   );
 }
 
@@ -1185,6 +1403,14 @@ function CourtsScreen({ searchQuery = "" }) {
     setCourtForm((atual) => ({ ...atual, [campo]: valor }));
   };
 
+  const atualizarImagemCadastro = (arquivo) => {
+    setCourtForm((atual) => ({
+      ...atual,
+      imagemArquivo: arquivo,
+      imagemUrl: arquivo ? "" : atual.imagemUrl,
+    }));
+  };
+
   const alternarModalidadeCadastro = (id) => {
     setCourtForm((atual) => {
       const selecionadas = atual.modalidadesIds.includes(id)
@@ -1216,11 +1442,17 @@ function CourtsScreen({ searchQuery = "" }) {
 
     setIsCreating(true);
     try {
+      let imagemUrl = courtForm.imagemUrl.trim();
+      if (courtForm.imagemArquivo) {
+        const upload = await enviarArquivo(courtForm.imagemArquivo, { entidade: "quadra" });
+        imagemUrl = upload?.arquivo?.url || "";
+      }
+
       await criarQuadra({
         nome: courtForm.nome.trim(),
         descricao: courtForm.descricao.trim(),
         valorHora,
-        imagemUrl: courtForm.imagemUrl.trim(),
+        imagemUrl,
         modalidadesIds: courtForm.modalidadesIds,
       });
       setFeedback("Quadra criada com sucesso.");
@@ -1251,7 +1483,7 @@ function CourtsScreen({ searchQuery = "" }) {
   }, [courts, searchQuery]);
 
   return (
-    <div className="admin-page">
+    <div className="admin-page admin-page--courts">
       <Toolbar title="Quadras" buttonLabel="Cadastrar nova quadra" onButtonClick={abrirCadastroQuadra} />
       <AdminState
         error={error}
@@ -1357,13 +1589,36 @@ function CourtsScreen({ searchQuery = "" }) {
                 />
               </label>
               <label className="admin-form__wide">
-                URL da imagem
+                Imagem da quadra
                 <input
                   value={courtForm.imagemUrl}
                   onChange={(event) => atualizarCampoCadastro("imagemUrl", event.target.value)}
-                  placeholder="/images/quadras/areia-01.jpeg"
+                  placeholder="Cole uma URL ou selecione uma foto abaixo"
+                  disabled={Boolean(courtForm.imagemArquivo)}
                 />
               </label>
+              <div className="admin-form__wide admin-court-image-picker">
+                <label htmlFor="court-image-file">
+                  <ImagePlus aria-hidden="true" size={18} />
+                  <span>{courtForm.imagemArquivo ? "Trocar foto" : "Selecionar foto"}</span>
+                  <input
+                    key={courtForm.imagemArquivo?.name || "court-image-empty"}
+                    id="court-image-file"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => atualizarImagemCadastro(event.target.files?.[0] || null)}
+                  />
+                </label>
+                <div>
+                  <strong>{courtForm.imagemArquivo?.name || "Nenhuma foto selecionada"}</strong>
+                  <small>JPG, PNG ou WebP. Se selecionar uma foto, a URL manual fica desativada.</small>
+                </div>
+                {courtForm.imagemArquivo && (
+                  <button type="button" onClick={() => atualizarImagemCadastro(null)}>
+                    Remover foto
+                  </button>
+                )}
+              </div>
               <label className="admin-form__wide">
                 Descricao
                 <textarea
@@ -1409,6 +1664,9 @@ function ModalitiesScreen({ searchQuery = "" }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState("");
+  const [editingDescriptionId, setEditingDescriptionId] = useState(null);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingDescriptionId, setSavingDescriptionId] = useState(null);
 
   const carregarModalidades = async () => {
     setIsLoading(true);
@@ -1435,6 +1693,42 @@ function ModalitiesScreen({ searchQuery = "" }) {
       await carregarModalidades();
     } catch (requestError) {
       setError(requestError.message || "Não foi possível atualizar a modalidade.");
+    }
+  };
+
+  const abrirEdicaoDescricao = (modalidade) => {
+    setFeedback("");
+    setError("");
+    setEditingDescriptionId(modalidade.id);
+    setDescriptionDraft(modalidade.descricao || "");
+  };
+
+  const cancelarEdicaoDescricao = () => {
+    setEditingDescriptionId(null);
+    setDescriptionDraft("");
+  };
+
+  const salvarDescricao = async (event, modalidade) => {
+    event.preventDefault();
+    setFeedback("");
+    setError("");
+    setSavingDescriptionId(modalidade.id);
+    try {
+      const response = await atualizarModalidade(modalidade.id, {
+        nome: modalidade.nome,
+        descricao: descriptionDraft,
+      });
+      const modalidadeAtualizada = response.modalidade || {
+        ...modalidade,
+        descricao: descriptionDraft.trim() || null,
+      };
+      setModalidades((atuais) => atuais.map((item) => (item.id === modalidade.id ? modalidadeAtualizada : item)));
+      setFeedback("Descrição da modalidade atualizada.");
+      cancelarEdicaoDescricao();
+    } catch (requestError) {
+      setError(requestError.message || "Não foi possível salvar a descrição da modalidade.");
+    } finally {
+      setSavingDescriptionId(null);
     }
   };
 
@@ -1471,7 +1765,34 @@ function ModalitiesScreen({ searchQuery = "" }) {
                   <strong>{modalidade.nome}</strong>
                   <small>MOD-{modalidade.id}</small>
                 </td>
-                <td>{modalidade.descricao || "--"}</td>
+                <td>
+                  {editingDescriptionId === modalidade.id ? (
+                    <form className="admin-modality-description-form" onSubmit={(event) => salvarDescricao(event, modalidade)}>
+                      <label className="sr-only" htmlFor={`modalidade-descricao-${modalidade.id}`}>
+                        Descrição da modalidade {modalidade.nome}
+                      </label>
+                      <textarea
+                        id={`modalidade-descricao-${modalidade.id}`}
+                        value={descriptionDraft}
+                        onChange={(event) => setDescriptionDraft(event.target.value)}
+                        placeholder="Adicione uma descrição curta para esta modalidade."
+                        rows={3}
+                      />
+                      <div>
+                        <button type="submit" disabled={savingDescriptionId === modalidade.id}>
+                          <Check aria-hidden="true" size={15} />
+                          <span>{savingDescriptionId === modalidade.id ? "Salvando..." : "Salvar"}</span>
+                        </button>
+                        <button type="button" onClick={cancelarEdicaoDescricao} disabled={savingDescriptionId === modalidade.id}>
+                          <X aria-hidden="true" size={15} />
+                          <span>Cancelar</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="admin-modality-description">{modalidade.descricao || "Sem descrição cadastrada."}</p>
+                  )}
+                </td>
                 <td>
                   <StatusBadge status={modalidade.status === "ativa" ? "Ativa" : "Inativa"} />
                 </td>
@@ -1484,6 +1805,10 @@ function ModalitiesScreen({ searchQuery = "" }) {
                     <button type="button" onClick={() => mudarStatus(modalidade.id, "inativa")}>
                       <X aria-hidden="true" size={15} />
                       <span>Inativar</span>
+                    </button>
+                    <button type="button" onClick={() => abrirEdicaoDescricao(modalidade)}>
+                      <Pencil aria-hidden="true" size={15} />
+                      <span>Editar descrição</span>
                     </button>
                   </div>
                 </td>
@@ -1745,7 +2070,7 @@ function ScheduleScreen() {
               </small>
             </div>
 
-            <div className="admin-schedule__filters" aria-label="Filtros da agenda">
+            <div className="admin-filter-card admin-schedule__filters" aria-label="Filtros da agenda">
               <label>
                 Quadra
                 <select value={filtros.quadraId} onChange={(event) => atualizarFiltro("quadraId", event.target.value)}>
@@ -1796,28 +2121,12 @@ function ScheduleScreen() {
               </button>
             </div>
 
-            <div className="admin-schedule__summary" aria-label="Resumo dos horários filtrados">
-              <article>
-                <small>Horários exibidos</small>
-                <strong>{resumoHorarios.total}</strong>
-                <em>{recorteDetalhe}</em>
-              </article>
-              <article className="admin-schedule__summary-item--livre">
-                <small>Livres</small>
-                <strong>{resumoHorarios.disponivel}</strong>
-                <em>{resumoHorarios.percentualLivre}% disponível</em>
-              </article>
-              <article className="admin-schedule__summary-item--reservado">
-                <small>Reservados</small>
-                <strong>{resumoHorarios.reservado}</strong>
-                <em>{resumoHorarios.percentualReservado}% do recorte</em>
-              </article>
-              <article className="admin-schedule__summary-item--bloqueado">
-                <small>Bloqueados</small>
-                <strong>{resumoHorarios.bloqueado}</strong>
-                <em>{resumoHorarios.percentualBloqueado}% indisponível</em>
-              </article>
-            </div>
+            <section className="admin-metric-grid" aria-label="Resumo dos horários filtrados">
+              <AdminMetricCard detail={recorteDetalhe} icon={Clock3} label="Horários exibidos" tone="blue" value={resumoHorarios.total} />
+              <AdminMetricCard detail={`${resumoHorarios.percentualLivre}% disponível`} icon={CircleCheck} label="Livres" tone="green" value={resumoHorarios.disponivel} />
+              <AdminMetricCard detail={`${resumoHorarios.percentualReservado}% do recorte`} icon={CalendarCheck} label="Reservados" tone="blue" value={resumoHorarios.reservado} />
+              <AdminMetricCard detail={`${resumoHorarios.percentualBloqueado}% indisponível`} icon={CircleX} label="Bloqueados" tone="red" value={resumoHorarios.bloqueado} />
+            </section>
 
             <div className="admin-schedule__availability" aria-label="Distribuição dos horários">
               <span className="is-free" style={{ width: `${resumoHorarios.percentualLivre}%` }} />
@@ -1875,6 +2184,10 @@ function ScheduleScreen() {
                       {grupo.slots.map((slot) => {
                         const podeAlternar = slot.status !== "reservado";
                         const isSaving = savingSlotId === slot.id;
+                        const detalheSlot = slot.reserva?.cliente?.nome
+                          || slot.cliente?.nome
+                          || slot.motivoBloqueio
+                          || slot.motivo;
                         return (
                           <button
                             className={`admin-slot admin-slot--${statusHorarioClasse(slot.status)}`}
@@ -1890,6 +2203,7 @@ function ScheduleScreen() {
                           >
                             <span>{formatarHoraAdmin(slot.horaInicio)}</span>
                             <small>{isSaving ? "Atualizando..." : statusHorario(slot.status)}</small>
+                            {detalheSlot && <em>{detalheSlot}</em>}
                           </button>
                         );
                       })}
@@ -1897,6 +2211,11 @@ function ScheduleScreen() {
                   </article>
                 ))}
               </div>
+            )}
+            {dataSelecionada && (
+              <footer className="admin-schedule__footer">
+                Horários exibidos para {dataSelecionada.full}.
+              </footer>
             )}
           </div>
         )}
@@ -2004,6 +2323,13 @@ function AnnouncementsScreen({ searchQuery = "" }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    titulo: "",
+    mensagem: "",
+    destaque: false,
+  });
 
   const carregarComunicados = async () => {
     setIsLoading(true);
@@ -2033,6 +2359,32 @@ function AnnouncementsScreen({ searchQuery = "" }) {
     }
   };
 
+  const atualizarCampoComunicado = (campo, valor) => {
+    setCreateForm((atual) => ({ ...atual, [campo]: valor }));
+  };
+
+  const cancelarCadastroComunicado = () => {
+    setIsCreateOpen(false);
+    setCreateForm({ titulo: "", mensagem: "", destaque: false });
+  };
+
+  const salvarComunicado = async (event) => {
+    event.preventDefault();
+    setFeedback("");
+    setError("");
+    setIsCreating(true);
+    try {
+      await criarComunicado(createForm);
+      setFeedback("Comunicado criado como rascunho.");
+      cancelarCadastroComunicado();
+      await carregarComunicados();
+    } catch (requestError) {
+      setError(requestError.message || "Não foi possível criar o comunicado.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const comunicadosFiltrados = useMemo(() => {
     const termo = normalizarBusca(searchQuery);
     if (!termo) return comunicados;
@@ -2050,7 +2402,20 @@ function AnnouncementsScreen({ searchQuery = "" }) {
 
   return (
     <div className="admin-page admin-page--announcements">
-      <Panel className="admin-panel--announcements" title="Comunicados">
+      <Panel
+        action={isCreateOpen ? "Fechar cadastro" : "Adicionar comunicado"}
+        className="admin-panel--announcements"
+        onAction={() => {
+          if (isCreateOpen) {
+            cancelarCadastroComunicado();
+            return;
+          }
+          setFeedback("");
+          setError("");
+          setIsCreateOpen(true);
+        }}
+        title="Comunicados"
+      >
         <AdminState
           error={error}
           isLoading={isLoading}
@@ -2059,6 +2424,45 @@ function AnnouncementsScreen({ searchQuery = "" }) {
           emptyText={searchQuery ? "Nenhum comunicado encontrado para essa busca." : "Nenhum comunicado encontrado."}
         />
         {feedback && <p className="admin-success">{feedback}</p>}
+        {isCreateOpen && (
+          <form className="admin-form admin-form--stack admin-announcement-create" onSubmit={salvarComunicado}>
+            <label>
+              Título
+              <input
+                value={createForm.titulo}
+                onChange={(event) => atualizarCampoComunicado("titulo", event.target.value)}
+                placeholder="Ex.: Agenda aberta para a semana"
+                required
+              />
+            </label>
+            <label>
+              Mensagem
+              <textarea
+                value={createForm.mensagem}
+                onChange={(event) => atualizarCampoComunicado("mensagem", event.target.value)}
+                placeholder="Escreva o aviso que aparecerá para os clientes."
+                required
+              />
+            </label>
+            <label className="admin-check admin-announcement-create__check">
+              <input
+                type="checkbox"
+                checked={createForm.destaque}
+                onChange={(event) => atualizarCampoComunicado("destaque", event.target.checked)}
+              />
+              Marcar como destaque
+            </label>
+            <div className="admin-modal__actions">
+              <AdminButton type="button" variant="ghost" onClick={cancelarCadastroComunicado} disabled={isCreating}>
+                Cancelar
+              </AdminButton>
+              <AdminButton type="submit" disabled={isCreating}>
+                <Plus aria-hidden="true" size={17} />
+                {isCreating ? "Salvando..." : "Salvar comunicado"}
+              </AdminButton>
+            </div>
+          </form>
+        )}
         {!isLoading && !error && comunicadosFiltrados.length > 0 && (
           <div className="admin-announcements">
             {comunicadosFiltrados.map((announcement) => (
@@ -2088,8 +2492,9 @@ function AnnouncementsScreen({ searchQuery = "" }) {
   );
 }
 
-function ReportsScreen() {
+function ReportsScreen({ onNavigate }) {
   const [reports, setReports] = useState(null);
+  const [filters, setFilters] = useState({ period: "all", status: "", modality: "", court: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -2098,12 +2503,12 @@ function ReportsScreen() {
 
     async function carregarRelatorios() {
       try {
-        const [reservas, modalidades, funil] = await Promise.all([
-          buscarRelatorioReservas(),
-          buscarRelatorioModalidades(),
+        const [reservas, horarios, funil] = await Promise.all([
+          listarReservas(),
+          listarHorarios(),
           buscarRelatorioFunilReserva(),
         ]);
-        if (active) setReports({ funil, reservas, modalidades });
+        if (active) setReports({ funil, horarios, reservas });
       } catch {
         if (active) setError("Não foi possível carregar os relatórios.");
       } finally {
@@ -2121,12 +2526,12 @@ function ReportsScreen() {
   useEffect(() => {
     const atualizarRelatorios = async () => {
       try {
-        const [reservas, modalidades, funil] = await Promise.all([
-          buscarRelatorioReservas(),
-          buscarRelatorioModalidades(),
+        const [reservas, horarios, funil] = await Promise.all([
+          listarReservas(),
+          listarHorarios(),
           buscarRelatorioFunilReserva(),
         ]);
-        setReports({ funil, reservas, modalidades });
+        setReports({ funil, horarios, reservas });
       } catch {
         // Mantem os dados atuais na tela se uma atualizacao silenciosa falhar.
       }
@@ -2152,121 +2557,126 @@ function ReportsScreen() {
     };
   }, []);
 
-  const reservasPorStatus = reports?.reservas?.agrupadasPorStatus?.map((item) => ({
-    label: statusReserva(item.status),
-    value: Number(item.total),
-  })) || [];
-  const reservasPorStatusMap = Object.fromEntries(
-    (reports?.reservas?.agrupadasPorStatus || []).map((item) => [
-      item.status,
-      Number(item.total || 0),
-    ]),
+  const reservations = reports?.reservas || EMPTY_INSIGHT_ITEMS;
+  const scheduleSlots = reports?.horarios || EMPTY_INSIGHT_ITEMS;
+  const filterOptions = useMemo(() => ({
+    courts: [...new Set(reservations.map((item) => item.quadra?.nome).filter(Boolean))].sort(),
+    modalities: [...new Set(reservations.map((item) => item.modalidade?.nome).filter(Boolean))].sort(),
+  }), [reservations]);
+  const currentBounds = useMemo(() => getPeriodBounds(filters.period), [filters.period]);
+  const matchesFilters = useCallback((reservation, bounds = currentBounds) => (
+    isWithinBounds(reservation.data, bounds)
+    && (!filters.status || reservation.status === filters.status)
+    && (!filters.modality || reservation.modalidade?.nome === filters.modality)
+    && (!filters.court || reservation.quadra?.nome === filters.court)
+  ), [currentBounds, filters.court, filters.modality, filters.status]);
+  const filteredReservations = useMemo(
+    () => reservations.filter((reservation) => matchesFilters(reservation)),
+    [matchesFilters, reservations],
   );
-
-  const modalidades = reports?.modalidades?.modalidades?.map((item) => ({
-    label: item.nome,
-    value: Number(item.totalReservas || 0),
-  })) || [];
-  const funilReserva = reports?.funil || {};
-  const metricasFunil = (chave) =>
-    funilReserva[chave] || { totalAcessos: 0, visitantesUnicos: 0 };
-  const detalheAcessos = (metrica, singular = "acesso", plural = "acessos") => {
-    const total = Number(metrica?.totalAcessos || 0);
-    if (!total) return "Sem acessos novos";
-    return `${total} ${total === 1 ? singular : plural}`;
-  };
-  const marcacaoReserva = metricasFunil("marcacao");
-  const dadosReserva = metricasFunil("dados");
-  const pagamentoReserva = metricasFunil("pagamento");
-  const pagamentoGerado = metricasFunil("pagamentoGerado");
-
-  const highlights = reports
-    ? [
-        { label: "Total de reservas", value: reports.reservas.total },
-        {
-          label: "Marcar reserva",
-          value: marcacaoReserva.visitantesUnicos,
-          detail: detalheAcessos(marcacaoReserva, "visita na pagina", "visitas na pagina"),
-          tone: "blue",
-        },
-        {
-          label: "Dados da reserva",
-          value: dadosReserva.visitantesUnicos,
-          detail: detalheAcessos(dadosReserva, "chegou aos dados", "chegaram aos dados"),
-          tone: "green",
-        },
-        {
-          label: "Chegaram ao pagamento",
-          value: pagamentoReserva.visitantesUnicos,
-          detail: detalheAcessos(pagamentoReserva, "chegou ao pagamento", "chegaram ao pagamento"),
-          tone: "orange",
-        },
-        {
-          label: "Pagamentos gerados",
-          value: reports.reservas.pagamentosGerados || 0,
-          detail: pagamentoGerado.totalAcessos
-            ? detalheAcessos(pagamentoGerado, "pessoa no funil", "pessoas no funil")
-            : "Pix ou checkout criados",
-          tone: "sand",
-        },
-        {
-          label: "Pagaram",
-          value: reports.reservas.pagamentosAprovados || 0,
-          detail: "pagamentos aprovados",
-          tone: "green",
-        },
-        {
-          label: "Confirmadas",
-          value: reservasPorStatusMap.confirmada || 0,
-          detail: "reservas confirmadas",
-        },
-        {
-          label: "Canceladas",
-          value: reservasPorStatusMap.cancelada || 0,
-          detail: "reservas canceladas",
-        },
-        {
-          label: "Expiradas",
-          value: reservasPorStatusMap.expirada || 0,
-          detail: "reservas expiradas",
-        },
-      ]
+  const previousReservations = useMemo(
+    () => currentBounds ? reservations.filter((reservation) => matchesFilters(reservation, { start: currentBounds.previousStart, end: currentBounds.previousEnd })) : [],
+    [currentBounds, matchesFilters, reservations],
+  );
+  const filteredSlots = useMemo(
+    () => scheduleSlots.filter((slot) => isWithinBounds(slot.data, currentBounds) && (!filters.court || slot.quadra?.nome === filters.court)),
+    [currentBounds, filters.court, scheduleSlots],
+  );
+  const statusTotals = useMemo(() => filteredReservations.reduce((total, reservation) => {
+    total[reservation.status] = (total[reservation.status] || 0) + 1;
+    return total;
+  }, {}), [filteredReservations]);
+  const approvedRevenue = useCallback((items) => items
+    .filter((reservation) => reservation.pagamentoStatus === "aprovado")
+    .reduce((total, reservation) => total + Number(reservation.valorTotal || 0), 0), []);
+  const currentRevenue = approvedRevenue(filteredReservations);
+  const previousRevenue = approvedRevenue(previousReservations);
+  const confirmed = statusTotals.confirmada || 0;
+  const cancelled = statusTotals.cancelada || 0;
+  const expired = statusTotals.expirada || 0;
+  const pendingPayments = filteredReservations.filter((reservation) => reservation.pagamentoStatus === "pendente").length;
+  const occupancy = filteredSlots.length ? Math.round((filteredSlots.filter((slot) => slot.status === "reservado").length / filteredSlots.length) * 100) : null;
+  const previousOccupancySlots = useMemo(
+    () => currentBounds ? scheduleSlots.filter((slot) => isWithinBounds(slot.data, { start: currentBounds.previousStart, end: currentBounds.previousEnd }) && (!filters.court || slot.quadra?.nome === filters.court)) : [],
+    [currentBounds, filters.court, scheduleSlots],
+  );
+  const previousOccupancy = previousOccupancySlots.length ? Math.round((previousOccupancySlots.filter((slot) => slot.status === "reservado").length / previousOccupancySlots.length) * 100) : null;
+  const totalChange = percentageChange(filteredReservations.length, previousReservations.length);
+  const confirmationRate = filteredReservations.length ? Math.round((confirmed / filteredReservations.length) * 100) : 0;
+  const previousConfirmationRate = previousReservations.length ? Math.round((previousReservations.filter((reservation) => reservation.status === "confirmada").length / previousReservations.length) * 100) : null;
+  const dailyEvolution = useMemo(() => {
+    const totals = filteredReservations.reduce((map, reservation) => {
+      const date = String(reservation.data || "").slice(0, 10);
+      if (date) map.set(date, (map.get(date) || 0) + 1);
+      return map;
+    }, new Map());
+    return [...totals.entries()].sort(([first], [second]) => first.localeCompare(second)).slice(-10).map(([date, value]) => ({
+      label: new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(toLocalDate(date)),
+      value,
+    }));
+  }, [filteredReservations]);
+  const rollingAverage = dailyEvolution.length >= 3
+    ? dailyEvolution.map((_, index) => {
+      const window = dailyEvolution.slice(Math.max(0, index - 2), index + 1);
+      return window.reduce((sum, item) => sum + item.value, 0) / window.length;
+    })
     : [];
+  const statusItems = [
+    { label: "Confirmadas", value: confirmed, color: "#22a06b" },
+    { label: "Canceladas", value: cancelled, color: "#dd4d52" },
+    { label: "Expiradas", value: expired, color: "#98a2b3" },
+    { label: "Pendentes", value: statusTotals.aguardando_pagamento || 0, color: "#f28a30" },
+    { label: "Finalizadas", value: statusTotals.finalizada || 0, color: "#2867c8" },
+  ];
+  const funnel = reports?.funil || {};
+  const funnelItems = [
+    { label: "Iniciaram a reserva", value: Number(funnel.marcacao?.visitantesUnicos || 0) },
+    { label: "Preencheram os dados", value: Number(funnel.dados?.visitantesUnicos || 0) },
+    { label: "Chegaram ao pagamento", value: Number(funnel.pagamento?.visitantesUnicos || 0) },
+    { label: "Pagamento gerado", value: Number(funnel.pagamentoGerado?.visitantesUnicos || 0) },
+    { label: "Confirmadas", value: confirmed },
+  ];
+  const modalityRows = useMemo(() => {
+    const grouped = filteredReservations.reduce((map, reservation) => {
+      const name = reservation.modalidade?.nome || "Sem modalidade";
+      const current = map.get(name) || { name, total: 0, confirmed: 0, cancelled: 0 };
+      current.total += 1;
+      if (reservation.status === "confirmada") current.confirmed += 1;
+      if (reservation.status === "cancelada") current.cancelled += 1;
+      map.set(name, current);
+      return map;
+    }, new Map());
+    return [...grouped.values()].map((item) => ({ ...item, conversion: item.total ? Math.round((item.confirmed / item.total) * 100) : 0 })).sort((first, second) => second.total - first.total);
+  }, [filteredReservations]);
+  const metricDetail = (change, fallback = "Dados do período") => change === null ? fallback : `${change >= 0 ? "+" : ""}${change}% vs. período anterior`;
+  const metrics = [
+    { label: "Total de reservas", value: filteredReservations.length, detail: metricDetail(totalChange), icon: CalendarDays, tone: "blue", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Receita recebida", value: formatCurrency(currentRevenue), detail: metricDetail(percentageChange(currentRevenue, previousRevenue), "Sem base anterior"), icon: CircleDollarSign, tone: "green", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Taxa de conversão", value: `${confirmationRate}%`, detail: metricDetail(percentageChange(confirmationRate, previousConfirmationRate)), icon: BarChart3, tone: "blue", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Taxa de ocupação", value: occupancy === null ? "--" : `${occupancy}%`, detail: occupancy === null ? "Sem horários no recorte" : metricDetail(percentageChange(occupancy, previousOccupancy)), icon: Clock3, tone: "orange", sparkline: filteredSlots.map((slot) => slot.status === "reservado" ? 1 : 0) },
+    { label: "Confirmadas", value: confirmed, detail: `${confirmationRate}% do total`, icon: CircleCheck, tone: "green", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Canceladas", value: cancelled, detail: filteredReservations.length ? `${Math.round((cancelled / filteredReservations.length) * 100)}% do total` : "Sem reservas", icon: CircleX, tone: "red", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Expiradas", value: expired, detail: filteredReservations.length ? `${Math.round((expired / filteredReservations.length) * 100)}% do total` : "Sem reservas", icon: ReceiptText, tone: "purple", sparkline: dailyEvolution.map((item) => item.value) },
+    { label: "Pagamentos pendentes", value: pendingPayments, detail: filteredReservations.length ? `${Math.round((pendingPayments / filteredReservations.length) * 100)}% do total` : "Sem reservas", icon: CreditCard, tone: "orange", sparkline: dailyEvolution.map((item) => item.value) },
+  ];
 
   return (
-    <div className="admin-page">
+    <div className="admin-page admin-page--reports">
       <AdminState
         error={error}
-        isLoading={isLoading}
-        loadingText="Carregando relatorios..."
+        isLoading={false}
       />
-      <section className="admin-grid admin-grid--two">
-        <Panel title="Reservas por status">
-          <SimpleChart items={reservasPorStatus} />
-        </Panel>
-        <Panel title="Reservas por modalidade">
-          <div className="admin-report-bars">
-            {modalidades.map((item) => (
-              <div key={item.label}>
-                <span>
-                  {item.label}
-                  <strong>{item.value}</strong>
-                </span>
-                <i style={{ width: `${Math.min(Number(item.value) * 10, 100)}%` }} />
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </section>
-      <section className="admin-stats admin-stats--reports">
-        {highlights.map((item) => (
-          <article className={`admin-stat admin-stat--${item.tone || "sand"}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <small>{item.detail || "Dados atualizados"}</small>
-          </article>
-        ))}
-      </section>
+      {isLoading ? <DashboardSkeleton metrics={8} /> : !error && <>
+        <section className="admin-report-filters" aria-label="Filtros dos relatórios">
+          <label>Período<select value={filters.period} onChange={(event) => setFilters((current) => ({ ...current, period: event.target.value }))}><option value="all">Todo o período</option><option value="today">Hoje</option><option value="week">Esta semana</option><option value="month">Este mês</option></select></label>
+          <label>Modalidade<select value={filters.modality} onChange={(event) => setFilters((current) => ({ ...current, modality: event.target.value }))}><option value="">Todas as modalidades</option>{filterOptions.modalities.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label>Quadra<select value={filters.court} onChange={(event) => setFilters((current) => ({ ...current, court: event.target.value }))}><option value="">Todas as quadras</option>{filterOptions.courts.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label>Status<select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="">Todos os status</option><option value="confirmada">Confirmada</option><option value="aguardando_pagamento">Aguardando pagamento</option><option value="cancelada">Cancelada</option><option value="expirada">Expirada</option><option value="finalizada">Finalizada</option></select></label>
+          <button type="button" onClick={() => setFilters({ period: "all", status: "", modality: "", court: "" })}>Limpar filtros</button>
+        </section>
+        <section className="admin-insight-metrics admin-insight-metrics--reports" aria-label="Indicadores dos relatórios">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</section>
+        <section className="admin-report-grid"><StatusReportCard items={statusItems} total={filteredReservations.length} /><ReservationsEvolutionCard items={dailyEvolution} averages={rollingAverage} /><ConversionFunnel items={funnelItems} /><ModalityPerformanceTable items={modalityRows} onNavigate={onNavigate} /></section>
+      </>}
     </div>
   );
 }
@@ -2350,24 +2760,6 @@ function StatusBadge({ status }) {
   return <span className={`admin-status admin-status--${normalized}`}>{status}</span>;
 }
 
-function ReservationSummary({ reservation }) {
-  return (
-    <article className="admin-reservation-summary">
-      <div>
-        <strong>{reservation.time}</strong>
-        <small>{reservation.date}</small>
-      </div>
-      <span>
-        <strong>{reservation.customer}</strong>
-        <small>
-          {reservation.court} • {reservation.modality}
-        </small>
-      </span>
-      <StatusBadge status={reservation.status} />
-    </article>
-  );
-}
-
 function ResponsiveTable({ children, className = "", columns }) {
   return (
     <div className="admin-table-wrap">
@@ -2381,25 +2773,6 @@ function ResponsiveTable({ children, className = "", columns }) {
         </thead>
         <tbody>{children}</tbody>
       </table>
-    </div>
-  );
-}
-
-function SimpleChart({ items }) {
-  const maxValue = useMemo(
-    () => Math.max(1, ...items.map((item) => item.value)),
-    [items],
-  );
-
-  return (
-    <div className="admin-simple-chart">
-      {items.map((item) => (
-        <div key={item.label}>
-          <span>{item.value}</span>
-          <i style={{ height: `${(item.value / maxValue) * 100}%` }} />
-          <small>{item.label}</small>
-        </div>
-      ))}
     </div>
   );
 }
