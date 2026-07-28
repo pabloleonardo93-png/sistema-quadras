@@ -5,6 +5,7 @@ import {
   calcularPagamentoExpiraEm,
   tempoPagamentoMinutos,
 } from "../src/config/pagamento.js";
+import { dadosPagamentoInicial } from "../src/services/reservaService.js";
 
 test("define dez minutos como prazo padrao para pagamento", () => {
   assert.equal(tempoPagamentoMinutos, 10);
@@ -27,4 +28,12 @@ test("calcula corte para expirar reservas pendentes", () => {
 test("ignora datas invalidas para expiracao", () => {
   assert.equal(calcularPagamentoExpiraEm("data-invalida"), null);
   assert.equal(calcularCorteExpiracao("data-invalida"), null);
+});
+
+test("reserva aguardando pagamento recebe prazo desde a criacao", () => {
+  const criadoEm = new Date("2026-07-11T10:00:00.000Z");
+  const dados = dadosPagamentoInicial(criadoEm);
+
+  assert.equal(dados.pagamentoCriadoEm, criadoEm);
+  assert.equal(dados.pagamentoExpiraEm.toISOString(), "2026-07-11T10:10:00.000Z");
 });

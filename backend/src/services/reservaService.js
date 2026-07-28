@@ -8,7 +8,8 @@ import Reserva from "../models/Reserva.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import { hojeLocal, validarId } from "../utils/validacoes.js";
 import { registrarLog } from "./logService.js";
-import { limitarOperacaoPersistente } from "./limitePersistenteService.js";
+import { limitarOperacaoPersistente, OPERACOES_LIMITE } from "./limitePersistenteService.js";
+import { calcularPagamentoExpiraEm } from "../config/pagamento.js";
 
 export const inclusoesReserva = [
   { model: Cliente, as: "cliente" },
@@ -16,6 +17,14 @@ export const inclusoesReserva = [
   { model: Modalidade, as: "modalidade" },
   { model: Horario, as: "horario" },
 ];
+
+export function dadosPagamentoInicial(agora = new Date()) {
+  const pagamentoCriadoEm = agora instanceof Date ? agora : new Date(agora);
+  return {
+    pagamentoCriadoEm,
+    pagamentoExpiraEm: calcularPagamentoExpiraEm(pagamentoCriadoEm),
+  };
+}
 
 export async function verificarHorarioDisponivel({ quadra, horario, transaction }) {
   if (!horario || horario.quadraId !== quadra.id) {
@@ -54,19 +63,18 @@ export async function criarReserva({
   enderecoIp = null,
   emailVerificado = null,
 }) {
+  if (!adminId) {
+    await limitarOperacaoPersistente({
+      operacao: OPERACOES_LIMITE.RESERVA,
+      identificadores: [
+        ...(emailVerificado?.verificacaoId ? [{ tipo: "sessao", valor: emailVerificado.verificacaoId }] : []),
+        ...(emailVerificado?.email ? [{ tipo: "email", valor: emailVerificado.email }] : []),
+        ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : []),
+      ],
+    });
+  }
   try {
     return await sequelize.transaction(async (transaction) => {
-      if (!adminId) {
-        await limitarOperacaoPersistente({
-          operacao: "reserva",
-          identificadores: [
-            ...(emailVerificado?.verificacaoId ? [{ tipo: "sessao", valor: emailVerificado.verificacaoId }] : []),
-            ...(emailVerificado?.email ? [{ tipo: "email", valor: emailVerificado.email }] : []),
-            ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : []),
-          ],
-          transaction,
-        });
-      }
       const cliente = await Cliente.findByPk(validarId(clienteId, "Cliente"), { transaction });
       if (!cliente || cliente.status !== "ativo") {
         throw new ErroDaAplicacao("Cliente não encontrado ou inativo.", 409);
@@ -98,6 +106,7 @@ export async function criarReserva({
       });
       await verificarHorarioDisponivel({ quadra, horario, transaction });
 
+      const dadosPagamento = dadosPagamentoInicial();
       const reserva = await Reserva.create({
         clienteId: cliente.id,
         emailVerificacaoId: emailVerificado.verificacaoId,
@@ -110,6 +119,7 @@ export async function criarReserva({
         status: "aguardando_pagamento",
         valorTotal: Number(quadra.valorHora || 0),
         pagamentoStatus: "pendente",
+        ...dadosPagamento,
         observacoes: typeof observacoes === "string" ? observacoes.trim() || null : null,
       }, { transaction });
 

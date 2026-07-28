@@ -6,7 +6,7 @@ import Reserva from "../models/Reserva.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import { validarEmail, validarId } from "../utils/validacoes.js";
 import { dadosExpiracaoPagamento } from "./expiracaoReservaService.js";
-import { limitarOperacaoPersistente } from "./limitePersistenteService.js";
+import { limitarOperacaoPersistente, OPERACOES_LIMITE } from "./limitePersistenteService.js";
 import { registrarLog } from "./logService.js";
 import { inclusoesReserva } from "./reservaService.js";
 
@@ -238,22 +238,83 @@ function proximaTentativaPagamento(reserva) {
   return tentativaAtual + 1;
 }
 
-export async function criarCheckoutDaReserva({ reservaId, emailVerificado, enderecoIp = null }) {
+function pagamentoEmProcessamento(reserva, tipo) {
+  return reserva.pagamentoStatus === "pendente"
+    && tipoDoPagamento(reserva) === tipo
+    && reserva.pagamentoIdempotenciaChave
+    && reserva.pagamentoCriadoEm
+    && reserva.pagamentoExpiraEm
+    && reserva.pagamentoExpiraEm > new Date();
+}
+
+async function prepararCriacaoPagamento({ reservaId, emailVerificado, tipo }) {
   return sequelize.transaction(async (transaction) => {
-    await limitarOperacaoPersistente({
-      operacao: "pagamento",
-      identificadores: [{ tipo: "sessao", valor: emailVerificado.verificacaoId }, { tipo: "reserva", valor: reservaId }, ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : [])],
-      transaction,
-    });
     const reserva = await carregarReservaDaSessao({ reservaId, email: emailVerificado.email, transaction, lock: true });
     validarReservaParaPagamento(reserva);
-    const existente = respostaAtiva(reserva, "checkout");
-    if (existente) return existente;
+    if (pagamentoEmProcessamento(reserva, tipo)) {
+      return {
+        reserva,
+        tentativa: reserva.pagamentoTentativa,
+        idempotencia: reserva.pagamentoIdempotenciaChave,
+        criadoEm: reserva.pagamentoCriadoEm,
+        expiraEm: reserva.pagamentoExpiraEm,
+      };
+    }
 
+    const existente = respostaAtiva(reserva, tipo);
+    if (existente) return { existente };
+
+    const criadoEm = reserva.pagamentoCriadoEm || new Date();
+    const expiraEm = reserva.pagamentoExpiraEm || calcularPagamentoExpiraEm(criadoEm);
+    if (!expiraEm || expiraEm <= new Date()) {
+      throw new ErroDaAplicacao("O prazo para pagamento desta reserva expirou.", 409);
+    }
     const tentativa = proximaTentativaPagamento(reserva);
-    const idempotencia = chaveIdempotencia(reserva, "checkout", tentativa);
-    const criadoEm = new Date();
-    const expiraEm = calcularPagamentoExpiraEm(criadoEm);
+    const idempotencia = chaveIdempotencia(reserva, tipo, tentativa);
+    // Persiste a intencao antes da chamada externa. Se a resposta do provedor ou
+    // a gravacao posterior falhar, a repeticao reutiliza a mesma chave.
+    await reserva.update({
+      pagamentoStatus: "pendente",
+      pagamentoTipo: tipo,
+      pagamentoTentativa: tentativa,
+      pagamentoIdempotenciaChave: idempotencia,
+      pagamentoCriadoEm: criadoEm,
+      pagamentoExpiraEm: expiraEm,
+      mercadoPagoPreferenceId: null,
+      mercadoPagoPaymentId: null,
+      mercadoPagoStatus: "creating",
+      mercadoPagoStatusDetail: null,
+      pagamentoUrl: null,
+      pixCopiaECola: null,
+      pixQrCodeBase64: null,
+    }, { transaction });
+    return { reserva, tentativa, idempotencia, criadoEm, expiraEm };
+  });
+}
+
+async function salvarPagamentoCriado({ reservaId, idempotencia, valores, acao, detalhes }) {
+  return sequelize.transaction(async (transaction) => {
+    const reserva = await Reserva.findByPk(reservaId, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!reserva || reserva.pagamentoIdempotenciaChave !== idempotencia) {
+      throw new ErroDaAplicacao("Nao foi possivel registrar o pagamento criado.", 409);
+    }
+    if (reserva.status !== "aguardando_pagamento" || reserva.pagamentoStatus !== "pendente") {
+      throw new ErroDaAplicacao("A reserva nao pode mais receber este pagamento.", 409);
+    }
+    await reserva.update(valores, { transaction });
+    await registrarLog({ acao, entidade: "reserva", entidadeId: reserva.id, detalhes, transaction });
+    return reserva;
+  });
+}
+
+export async function criarCheckoutDaReserva({ reservaId, emailVerificado, enderecoIp = null }) {
+  await limitarOperacaoPersistente({
+    operacao: OPERACOES_LIMITE.PAGAMENTO,
+    identificadores: [{ tipo: "sessao", valor: emailVerificado.verificacaoId }, { tipo: "reserva", valor: reservaId }, ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : [])],
+  });
+  const preparacao = await prepararCriacaoPagamento({ reservaId, emailVerificado, tipo: "checkout" });
+  if (preparacao.existente) return preparacao.existente;
+  const { reserva, tentativa, idempotencia, criadoEm, expiraEm } = preparacao;
     const baseUrl = appPublicUrl();
     const preferenceBody = {
       items: [dadosDoItem(reserva)],
@@ -273,38 +334,38 @@ export async function criarCheckoutDaReserva({ reservaId, emailVerificado, ender
     const preference = await chamarMercadoPago("/checkout/preferences", { method: "POST", headers: { "X-Idempotency-Key": idempotencia }, body: JSON.stringify(preferenceBody) });
     const checkoutUrl = preference.init_point || preference.sandbox_init_point;
     if (!checkoutUrl) throw new ErroDaAplicacao("Mercado Pago nao retornou URL de checkout.", 502);
-    await reserva.update({ pagamentoStatus: "pendente", pagamentoTipo: "checkout", pagamentoTentativa: tentativa, pagamentoIdempotenciaChave: idempotencia, mercadoPagoPreferenceId: preference.id, mercadoPagoPaymentId: null, mercadoPagoStatus: "pending", mercadoPagoStatusDetail: null, pagamentoUrl: checkoutUrl, pagamentoCriadoEm: criadoEm, pagamentoExpiraEm: expiraEm, pixCopiaECola: null, pixQrCodeBase64: null }, { transaction });
-    await registrarLog({ acao: "pagamento_criado", entidade: "reserva", entidadeId: reserva.id, detalhes: { tentativa, tipo: "checkout" }, transaction });
+    await salvarPagamentoCriado({
+      reservaId: reserva.id,
+      idempotencia,
+      valores: { mercadoPagoPreferenceId: preference.id, mercadoPagoPaymentId: null, mercadoPagoStatus: "pending", mercadoPagoStatusDetail: null, pagamentoUrl: checkoutUrl, pixCopiaECola: null, pixQrCodeBase64: null },
+      acao: "pagamento_criado",
+      detalhes: { tentativa, tipo: "checkout" },
+    });
     return { reserva: dadosReservaPagamento(reserva), checkoutUrl, preferenceId: preference.id, pagamentoExpiraEm: expiraEm.toISOString(), tempoPagamentoMinutos };
-  });
 }
 
 export async function criarPixDaReserva({ reservaId, emailVerificado, enderecoIp = null }) {
-  return sequelize.transaction(async (transaction) => {
-    await limitarOperacaoPersistente({
-      operacao: "pagamento",
-      identificadores: [{ tipo: "sessao", valor: emailVerificado.verificacaoId }, { tipo: "reserva", valor: reservaId }, ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : [])],
-      transaction,
-    });
-    const reserva = await carregarReservaDaSessao({ reservaId, email: emailVerificado.email, transaction, lock: true });
-    validarReservaParaPagamento(reserva);
-    const existente = respostaAtiva(reserva, "pix");
-    if (existente) return existente;
-
-    const tentativa = proximaTentativaPagamento(reserva);
-    const idempotencia = chaveIdempotencia(reserva, "pix", tentativa);
-    const criadoEm = new Date();
-    const expiraEm = calcularPagamentoExpiraEm(criadoEm);
+  await limitarOperacaoPersistente({
+    operacao: OPERACOES_LIMITE.PAGAMENTO,
+    identificadores: [{ tipo: "sessao", valor: emailVerificado.verificacaoId }, { tipo: "reserva", valor: reservaId }, ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : [])],
+  });
+  const preparacao = await prepararCriacaoPagamento({ reservaId, emailVerificado, tipo: "pix" });
+  if (preparacao.existente) return preparacao.existente;
+  const { reserva, tentativa, idempotencia, expiraEm } = preparacao;
     const item = dadosDoItem(reserva);
     const paymentBody = { transaction_amount: item.unit_price, description: item.title, payment_method_id: "pix", date_of_expiration: expiraEm.toISOString(), external_reference: String(reserva.id), metadata: { reserva_id: reserva.id, payment_type: "pix", payment_attempt: tentativa }, payer: dadosDoPagador(reserva) };
     if (!isLocalUrl(webhookUrl())) paymentBody.notification_url = webhookUrl();
     const pagamento = await chamarMercadoPago("/v1/payments", { method: "POST", headers: { "X-Idempotency-Key": idempotencia }, body: JSON.stringify(paymentBody) });
     const pix = dadosPixDoPagamento(pagamento);
     if (!pix.qrCode && !pix.qrCodeBase64 && !pix.ticketUrl) throw new ErroDaAplicacao("Mercado Pago nao retornou os dados do Pix.", 502);
-    await reserva.update({ pagamentoStatus: pix.status, pagamentoTipo: "pix", pagamentoTentativa: tentativa, pagamentoIdempotenciaChave: idempotencia, mercadoPagoPreferenceId: null, mercadoPagoPaymentId: pix.pagamentoId, mercadoPagoStatus: pix.mercadoPagoStatus, mercadoPagoStatusDetail: pix.mercadoPagoStatusDetail, pagamentoUrl: pix.ticketUrl, pagamentoCriadoEm: criadoEm, pagamentoExpiraEm: expiraEm, pixCopiaECola: pix.qrCode, pixQrCodeBase64: pix.qrCodeBase64 }, { transaction });
-    await registrarLog({ acao: "pix_criado", entidade: "reserva", entidadeId: reserva.id, detalhes: { tentativa, tipo: "pix" }, transaction });
+    await salvarPagamentoCriado({
+      reservaId: reserva.id,
+      idempotencia,
+      valores: { pagamentoStatus: pix.status, mercadoPagoPaymentId: pix.pagamentoId, mercadoPagoStatus: pix.mercadoPagoStatus, mercadoPagoStatusDetail: pix.mercadoPagoStatusDetail, pagamentoUrl: pix.ticketUrl, pixCopiaECola: pix.qrCode, pixQrCodeBase64: pix.qrCodeBase64 },
+      acao: "pix_criado",
+      detalhes: { tentativa, tipo: "pix" },
+    });
     return { reserva: dadosReservaPagamento(reserva), pix, pagamentoExpiraEm: expiraEm.toISOString(), tempoPagamentoMinutos };
-  });
 }
 
 export async function buscarPagamentoMercadoPago(paymentId) {
@@ -314,14 +375,39 @@ export async function buscarPagamentoMercadoPago(paymentId) {
 function webhookConfereComReserva({ pagamento, reserva }) {
   const reservaId = String(reserva.id);
   if (String(pagamento.external_reference || "") !== reservaId) return false;
-  if (String(pagamento.metadata?.reserva_id || "") !== reservaId) return false;
   if (String(pagamento.currency_id || "").toUpperCase() !== "BRL") return false;
   if (valorEmCentavos(pagamento.transaction_amount) !== valorEmCentavos(reserva.valorTotal)) return false;
   const tipo = tipoDoPagamento(reserva);
-  if (!tipo || String(pagamento.metadata?.payment_type || "") !== tipo) return false;
-  if (Number(pagamento.metadata?.payment_attempt) !== Number(reserva.pagamentoTentativa)) return false;
-  if (tipo === "pix") return pagamento.payment_method_id === "pix" && String(pagamento.id) === String(reserva.mercadoPagoPaymentId);
-  return pagamento.payment_method_id !== "pix" && String(pagamento.preference_id || "") === String(reserva.mercadoPagoPreferenceId || "");
+  if (!tipo) return false;
+
+  const metadata = pagamento.metadata || {};
+  const possuiMetadataAtual = metadata.reserva_id !== undefined
+    || metadata.payment_type !== undefined
+    || metadata.payment_attempt !== undefined;
+  if (possuiMetadataAtual) {
+    if (String(metadata.reserva_id || "") !== reservaId) return false;
+    if (String(metadata.payment_type || "") !== tipo) return false;
+    if (Number(metadata.payment_attempt) !== Number(reserva.pagamentoTentativa)) return false;
+    if (tipo === "pix") {
+      return pagamento.payment_method_id === "pix" && String(pagamento.id) === String(reserva.mercadoPagoPaymentId);
+    }
+    // A consulta de pagamento de Checkout Pro nem sempre traz preference_id.
+    // A preference persistida e a metadata assinada pelo provedor continuam
+    // vinculando o pagamento a uma criacao feita por este sistema.
+    return pagamento.payment_method_id !== "pix"
+      && Boolean(reserva.mercadoPagoPreferenceId)
+      && (!pagamento.preference_id || String(pagamento.preference_id) === String(reserva.mercadoPagoPreferenceId));
+  }
+
+  // Compatibilidade restrita para pagamentos anteriores ao metadata atual.
+  // Nunca aceita um pagamento legado sem tambem conferir identificador persistido.
+  if (tipo === "pix") {
+    return pagamento.payment_method_id === "pix"
+      && String(pagamento.id) === String(reserva.mercadoPagoPaymentId);
+  }
+  return pagamento.payment_method_id !== "pix"
+    && Boolean(reserva.mercadoPagoPreferenceId)
+    && String(pagamento.preference_id || "") === String(reserva.mercadoPagoPreferenceId);
 }
 
 export async function processarWebhookMercadoPago({ paymentId }) {

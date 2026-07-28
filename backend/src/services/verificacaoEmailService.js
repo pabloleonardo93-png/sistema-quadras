@@ -19,7 +19,7 @@ import VerificacaoEmail from "../models/VerificacaoEmail.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import { validarEmail } from "../utils/validacoes.js";
 import { enviarCodigoPorResend } from "./resendService.js";
-import { limitarOperacaoPersistente } from "./limitePersistenteService.js";
+import { limitarOperacaoPersistente, OPERACOES_LIMITE } from "./limitePersistenteService.js";
 
 function segredoVerificacao() {
   return process.env.EMAIL_VERIFICATION_SECRET || process.env.JWT_SECRET || "dev-email-verification-secret";
@@ -90,28 +90,24 @@ function gerarJwtTemporarioEmail({ verificacao }) {
 export async function solicitarCodigoEmail({ email, enderecoIp, userAgent }) {
   const emailNormalizado = validarEmail(email);
   const codigo = gerarCodigoVerificacao();
+  await limitarOperacaoPersistente({
+    operacao: "envio_codigo_email",
+    identificadores: [{ tipo: "email", valor: emailNormalizado }],
+    limite: maxEnviosPorEmail,
+    janelaMinutos: janelaEnviosEmailMinutos,
+  });
+  if (enderecoIp) {
+    await limitarOperacaoPersistente({
+      operacao: "envio_codigo_ip",
+      identificadores: [{ tipo: "ip", valor: enderecoIp }],
+      limite: maxEnviosPorIp,
+      janelaMinutos: janelaEnviosEmailMinutos,
+    });
+  }
   const { verificacao, expiraEm, reenvioLiberadoEm } = await sequelize.transaction(async (transaction) => {
     const agora = new Date();
     const expiraEm = calcularExpiracaoCodigoEmail(agora);
     const reenvioLiberadoEm = calcularLiberacaoReenvioEmail(agora);
-
-    // Todos os contadores entram na mesma transacao: uma tentativa bloqueada nao consome outro limite.
-    await limitarOperacaoPersistente({
-      operacao: "envio_codigo_email",
-      identificadores: [{ tipo: "email", valor: emailNormalizado }],
-      limite: maxEnviosPorEmail,
-      janelaMinutos: janelaEnviosEmailMinutos,
-      transaction,
-    });
-    if (enderecoIp) {
-      await limitarOperacaoPersistente({
-        operacao: "envio_codigo_ip",
-        identificadores: [{ tipo: "ip", valor: enderecoIp }],
-        limite: maxEnviosPorIp,
-        janelaMinutos: janelaEnviosEmailMinutos,
-        transaction,
-      });
-    }
 
     const ultimaVerificacao = await VerificacaoEmail.findOne({
       where: { email: emailNormalizado },
@@ -163,16 +159,15 @@ export async function solicitarCodigoEmail({ email, enderecoIp, userAgent }) {
 export async function confirmarCodigoEmail({ email, codigo, enderecoIp = null }) {
   const emailNormalizado = validarEmail(email);
   const codigoNormalizado = validarCodigo(codigo);
-  return sequelize.transaction(async (transaction) => {
-    await limitarOperacaoPersistente({
-      operacao: "confirmar_email",
-      identificadores: [
-        { tipo: "email", valor: emailNormalizado },
-        ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : []),
-      ],
-      transaction,
-    });
+  await limitarOperacaoPersistente({
+    operacao: OPERACOES_LIMITE.CONFIRMAR_EMAIL,
+    identificadores: [
+      { tipo: "email", valor: emailNormalizado },
+      ...(enderecoIp ? [{ tipo: "ip", valor: enderecoIp }] : []),
+    ],
+  });
 
+  const resultado = await sequelize.transaction(async (transaction) => {
     const agora = new Date();
     const verificacao = await VerificacaoEmail.findOne({
       where: { email: emailNormalizado, status: "pendente" },
@@ -181,36 +176,50 @@ export async function confirmarCodigoEmail({ email, codigo, enderecoIp = null })
       lock: transaction.LOCK.UPDATE,
     });
 
-    if (!verificacao) throw new ErroDaAplicacao("Codigo nao encontrado ou ja utilizado.", 404);
+    if (!verificacao) return { erro: new ErroDaAplicacao("Codigo nao encontrado ou ja utilizado.", 404) };
     if (verificacao.expiraEm <= agora) {
       await verificacao.update({ status: "expirado" }, { transaction });
-      throw new ErroDaAplicacao("Codigo expirado. Solicite um novo codigo.", 410);
+      return { erro: new ErroDaAplicacao("Codigo expirado. Solicite um novo codigo.", 410) };
     }
     if (verificacao.tentativas >= maxTentativasCodigoEmail) {
       await verificacao.update({ status: "bloqueado" }, { transaction });
-      throw new ErroDaAplicacao("Limite de tentativas atingido. Solicite um novo codigo.", 429);
+      return { erro: new ErroDaAplicacao("Limite de tentativas atingido. Solicite um novo codigo.", 429) };
     }
     if (!compararHash(codigoNormalizado, verificacao.codigoHash)) {
       const tentativas = verificacao.tentativas + 1;
       const status = tentativas >= maxTentativasCodigoEmail ? "bloqueado" : "pendente";
       await verificacao.update({ tentativas, status }, { transaction });
-      throw new ErroDaAplicacao(status === "bloqueado" ? "Limite de tentativas atingido. Solicite um novo codigo." : "Codigo invalido.", status === "bloqueado" ? 429 : 400);
+      return {
+        erro: new ErroDaAplicacao(
+          status === "bloqueado" ? "Limite de tentativas atingido. Solicite um novo codigo." : "Codigo invalido.",
+          status === "bloqueado" ? 429 : 400,
+        ),
+      };
     }
 
     const tokenExpiraEm = calcularExpiracaoTokenEmail(agora);
     const jwtTemporario = gerarJwtTemporarioEmail({ verificacao });
     await verificacao.update({ status: "validado", validadoEm: agora, tokenHash: criarHashVerificacao(jwtTemporario), tokenExpiraEm }, { transaction });
-    return { email: emailNormalizado, token: jwtTemporario, validadoEm: agora, tokenExpiraEm };
+    return { resposta: { email: emailNormalizado, token: jwtTemporario, validadoEm: agora, tokenExpiraEm } };
   });
+  if (resultado.erro) throw resultado.erro;
+  return resultado.resposta;
 }
 
 export async function revogarTokenTemporarioEmail({ token }) {
   return sequelize.transaction(async (transaction) => {
-    const sessao = await validarTokenTemporarioEmail({ token, transaction, lock: true });
-    await VerificacaoEmail.update({ status: "revogado", tokenHash: null, tokenExpiraEm: new Date() }, {
+    let sessao;
+    try {
+      sessao = await validarTokenTemporarioEmail({ token, transaction, lock: true });
+    } catch (erro) {
+      if (erro instanceof ErroDaAplicacao && [401, 403].includes(erro.status)) return { revogado: false };
+      throw erro;
+    }
+    const [alterados] = await VerificacaoEmail.update({ status: "revogado", tokenHash: null, tokenExpiraEm: new Date() }, {
       where: { id: sessao.verificacaoId, status: "validado" },
       transaction,
     });
+    return { revogado: alterados > 0 };
   });
 }
 

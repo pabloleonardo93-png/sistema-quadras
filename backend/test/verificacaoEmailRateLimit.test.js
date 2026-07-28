@@ -12,12 +12,15 @@ process.env.EMAIL_VERIFICATION_RESEND_SECONDS = "60";
 process.env.EMAIL_VERIFICATION_RATE_WINDOW_MINUTES = "60";
 process.env.EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL = "3";
 process.env.EMAIL_VERIFICATION_MAX_SENDS_PER_IP = "3";
+process.env.EMAIL_VERIFICATION_MAX_CONFIRM_ATTEMPTS_PER_WINDOW = "7";
+process.env.EMAIL_VERIFICATION_CONFIRM_RATE_WINDOW_MINUTES = "13";
 
 const { default: app } = await import("../src/app.js");
 const { default: VerificacaoEmail } = await import("../src/models/VerificacaoEmail.js");
 const { default: sequelize } = await import("../src/config/database.js");
 const { normalizarTrustProxyHops } = await import("../src/config/proxy.js");
 const { confirmarCodigoEmail, criarHashVerificacao } = await import("../src/services/verificacaoEmailService.js");
+const { limitesCriticos, OPERACOES_LIMITE } = await import("../src/services/limitePersistenteService.js");
 
 let server;
 let baseUrl;
@@ -89,6 +92,19 @@ async function postEnviar({ email, forwardedFor }) {
     status: resposta.status,
     body: await resposta.json(),
   };
+}
+
+async function postConfirmar({ email, codigo, forwardedFor = "198.51.100.91, 172.18.0.1" }) {
+  const resposta = await fetch(`${baseUrl}/api/verificacao-email/confirmar`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-forwarded-for": forwardedFor,
+      "user-agent": "rate-limit-test",
+    },
+    body: JSON.stringify({ email, codigo }),
+  });
+  return { status: resposta.status, body: await resposta.json() };
 }
 
 function liberarReenvioDoUltimoRegistro() {
@@ -298,6 +314,35 @@ test("tentativas simultaneas do codigo respeitam o limite atomico", async () => 
   assert.equal(verificacao.status, "bloqueado");
   assert.equal(resultados.includes("ok"), false);
   assert.equal(resultados.filter((status) => status === 429).length >= 1, true);
+});
+
+test("persiste a tentativa invalida mesmo quando a resposta HTTP e 400", async () => {
+  const verificacao = {
+    id: proximoId,
+    email: "tentativa-salva@example.com",
+    codigoHash: criarHashVerificacao("123456"),
+    status: "pendente",
+    tentativas: 0,
+    expiraEm: new Date(Date.now() + 60_000),
+    criadoEm: new Date(),
+    update: async (valores) => {
+      Object.assign(verificacao, valores);
+      return verificacao;
+    },
+  };
+  verificacoes.push(verificacao);
+
+  const resposta = await postConfirmar({ email: verificacao.email, codigo: "000000" });
+
+  assert.equal(resposta.status, 400);
+  assert.equal(verificacao.tentativas, 1);
+  assert.equal(verificacao.status, "pendente");
+});
+
+test("usa as variaveis especificas do limite de confirmacao", () => {
+  assert.equal(OPERACOES_LIMITE.CONFIRMAR_EMAIL, "confirmarEmail");
+  assert.equal(limitesCriticos.confirmarEmail.limite, 7);
+  assert.equal(limitesCriticos.confirmarEmail.janelaMinutos, 13);
 });
 
 test("valores invalidos de TRUST_PROXY_HOPS nao habilitam confianca irrestrita", () => {

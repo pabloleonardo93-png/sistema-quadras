@@ -5,13 +5,12 @@ import {
   validarAssinaturaWebhookMercadoPago,
 } from "../services/mercadoPagoService.js";
 import { criarOuAtualizarClienteValidado } from "../services/clienteService.js";
-import { alterarStatusDaReserva, criarReserva } from "../services/reservaService.js";
+import { criarReserva } from "../services/reservaService.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
 
 async function obterOuCriarReservaParaPagamento(req) {
   const reservaId = req.body.reservaId || req.body.reserva_id;
-  const criouReservaNesteFluxo = !reservaId;
   let reserva = reservaId ? { id: reservaId } : null;
 
   if (!reserva) {
@@ -34,19 +33,7 @@ async function obterOuCriarReservaParaPagamento(req) {
     });
   }
 
-  return { reserva, criouReservaNesteFluxo };
-}
-
-async function cancelarReservaCriadaNoFluxo({ req, reserva, criouReservaNesteFluxo }) {
-  if (!criouReservaNesteFluxo || !reserva?.id) return;
-
-  await alterarStatusDaReserva({
-    id: reserva.id,
-    statusEsperados: ["aguardando_pagamento"],
-    novoStatus: "cancelada",
-    adminId: null,
-    enderecoIp: req.ip,
-  }).catch(() => {});
+  return reserva;
 }
 
 export const criarPagamentoMercadoPago = executarAssincrono(async (req, res) => {
@@ -54,29 +41,20 @@ export const criarPagamentoMercadoPago = executarAssincrono(async (req, res) => 
     throw new ErroDaAplicacao("Mercado Pago nao configurado. Defina MERCADO_PAGO_ACCESS_TOKEN no backend.", 503);
   }
 
-  let reserva = null;
-  let criouReservaNesteFluxo = false;
-
-  try {
-    ({ reserva, criouReservaNesteFluxo } = await obterOuCriarReservaParaPagamento(req));
-
-    const resultado = await criarCheckoutDaReserva({
-      reservaId: reserva.id,
-      emailVerificado: req.emailVerificado,
-      enderecoIp: req.ip,
-    });
-    res.status(201).json({
-      mensagem: "Pagamento criado com sucesso.",
-      reserva: resultado.reserva,
-      checkoutUrl: resultado.checkoutUrl,
-      preferenceId: resultado.preferenceId,
-      pagamentoExpiraEm: resultado.pagamentoExpiraEm,
-      tempoPagamentoMinutos: resultado.tempoPagamentoMinutos,
-    });
-  } catch (erro) {
-    await cancelarReservaCriadaNoFluxo({ req, reserva, criouReservaNesteFluxo });
-    throw erro;
-  }
+  const reserva = await obterOuCriarReservaParaPagamento(req);
+  const resultado = await criarCheckoutDaReserva({
+    reservaId: reserva.id,
+    emailVerificado: req.emailVerificado,
+    enderecoIp: req.ip,
+  });
+  res.status(201).json({
+    mensagem: "Pagamento criado com sucesso.",
+    reserva: resultado.reserva,
+    checkoutUrl: resultado.checkoutUrl,
+    preferenceId: resultado.preferenceId,
+    pagamentoExpiraEm: resultado.pagamentoExpiraEm,
+    tempoPagamentoMinutos: resultado.tempoPagamentoMinutos,
+  });
 });
 
 export const criarPixMercadoPago = executarAssincrono(async (req, res) => {
@@ -84,28 +62,19 @@ export const criarPixMercadoPago = executarAssincrono(async (req, res) => {
     throw new ErroDaAplicacao("Mercado Pago nao configurado. Defina MERCADO_PAGO_ACCESS_TOKEN no backend.", 503);
   }
 
-  let reserva = null;
-  let criouReservaNesteFluxo = false;
-
-  try {
-    ({ reserva, criouReservaNesteFluxo } = await obterOuCriarReservaParaPagamento(req));
-
-    const resultado = await criarPixDaReserva({
-      reservaId: reserva.id,
-      emailVerificado: req.emailVerificado,
-      enderecoIp: req.ip,
-    });
-    res.status(201).json({
-      mensagem: "Pix criado com sucesso.",
-      reserva: resultado.reserva,
-      pix: resultado.pix,
-      pagamentoExpiraEm: resultado.pagamentoExpiraEm,
-      tempoPagamentoMinutos: resultado.tempoPagamentoMinutos,
-    });
-  } catch (erro) {
-    await cancelarReservaCriadaNoFluxo({ req, reserva, criouReservaNesteFluxo });
-    throw erro;
-  }
+  const reserva = await obterOuCriarReservaParaPagamento(req);
+  const resultado = await criarPixDaReserva({
+    reservaId: reserva.id,
+    emailVerificado: req.emailVerificado,
+    enderecoIp: req.ip,
+  });
+  res.status(201).json({
+    mensagem: "Pagamento criado com sucesso.",
+    reserva: resultado.reserva,
+    pix: resultado.pix,
+    pagamentoExpiraEm: resultado.pagamentoExpiraEm,
+    tempoPagamentoMinutos: resultado.tempoPagamentoMinutos,
+  });
 });
 
 export const criarCheckoutReserva = executarAssincrono(async (req, res) => {

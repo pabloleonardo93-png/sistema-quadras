@@ -40,6 +40,16 @@ export const limitesCriticos = {
   },
 };
 
+export const OPERACOES_LIMITE = Object.freeze({
+  CONFIRMAR_EMAIL: "confirmarEmail",
+  DADOS_CLIENTE: "dadosCliente",
+  RESERVA: "reserva",
+  PAGAMENTO: "pagamento",
+});
+
+const intervaloLimpezaMs = 15 * 60_000;
+let ultimaLimpezaEm = 0;
+
 async function consumirLimite({ chave, limite, janelaMinutos, agora, transaction }) {
   const inicioJanela = inicioDaJanela(agora, janelaMinutos);
   const expiraEm = new Date(inicioJanela.getTime() + janelaMinutos * 60_000);
@@ -62,7 +72,32 @@ async function consumirLimite({ chave, limite, janelaMinutos, agora, transaction
   }
 }
 
-export async function limitarOperacaoPersistente({ operacao, identificadores = [], limite, janelaMinutos, transaction = null }) {
+export async function limparLimitesPersistentesExpirados({ agora = new Date(), limite = 500 } = {}) {
+  const quantidade = Math.max(1, Math.min(Number(limite) || 500, 5_000));
+  await sequelize.query(
+    `DELETE FROM limites_seguranca
+     WHERE ctid IN (
+       SELECT ctid FROM limites_seguranca
+       WHERE expira_em <= :agora
+       ORDER BY expira_em ASC
+       LIMIT :limite
+     )`,
+    { replacements: { agora, limite: quantidade } },
+  );
+}
+
+async function limparLimitesOportunisticamente() {
+  const agora = Date.now();
+  if (agora - ultimaLimpezaEm < intervaloLimpezaMs) return;
+  ultimaLimpezaEm = agora;
+  try {
+    await limparLimitesPersistentesExpirados();
+  } catch {
+    // A limpeza e apenas manutencao; nao deve impedir a protecao da operacao atual.
+  }
+}
+
+export async function limitarOperacaoPersistente({ operacao, identificadores = [], limite, janelaMinutos }) {
   const config = limitesCriticos[operacao] || {};
   const limiteFinal = numeroPositivo(limite, config.limite || 10);
   const janelaFinal = numeroPositivo(janelaMinutos, config.janelaMinutos || 60);
@@ -76,6 +111,8 @@ export async function limitarOperacaoPersistente({ operacao, identificadores = [
     }
   };
 
-  if (transaction) return executar(transaction);
+  // O consumo precisa sobreviver ao rollback da operacao protegida. Nunca associe
+  // esta transacao a uma transacao de reserva, pagamento ou verificacao de e-mail.
+  await limparLimitesOportunisticamente();
   return sequelize.transaction(executar);
 }

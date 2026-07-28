@@ -62,7 +62,7 @@ export const obterSessao = executarAssincrono(async (req, res) => {
 export const encerrarSessao = executarAssincrono(async (req, res) => {
   const token = extrairTokenVerificacaoEmail(req);
   if (token) {
-    await revogarTokenTemporarioEmail({ token }).catch(() => {});
+    await revogarTokenTemporarioEmail({ token });
   }
   limparCookieVerificacao(res, req);
   res.status(204).end();

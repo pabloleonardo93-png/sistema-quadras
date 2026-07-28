@@ -26,6 +26,7 @@ import {
   limparSessaoEmailSalva,
   solicitarCodigoEmail,
 } from "../services/emailVerificationService";
+import { mascararEmail, mascararTelefone } from "../utils/privacidade";
 import { listarHorariosDisponiveis } from "../services/horarioService";
 import {
   criarReservaPublicaComPagamento,
@@ -1185,7 +1186,11 @@ export function ReservaRapida({
                         </span>
                         <span>
                           <small>E-mail validado</small>
-                          <strong>{customer.email}</strong>
+                          <strong>{mascararEmail(customer.email)}</strong>
+                        </span>
+                        <span>
+                          <small>Telefone</small>
+                          <strong>{mascararTelefone(customer.phone)}</strong>
                         </span>
                         <span>
                           <small>Valor da reserva</small>
