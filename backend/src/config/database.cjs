@@ -10,6 +10,19 @@ function env(...nomes) {
 }
 
 const databaseUrl = env("DATABASE_URL");
+const dbSsl = process.env.DB_SSL === "true";
+
+const sslConfig = dbSsl
+  ? {
+      ssl: true,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
+    }
+  : {};
 
 const configuracao = {
   ...(databaseUrl ? { use_env_variable: "DATABASE_URL" } : {
@@ -21,6 +34,7 @@ const configuracao = {
   }),
   dialect: "postgres",
   logging: false,
+  ...sslConfig,
 };
 
 module.exports = {

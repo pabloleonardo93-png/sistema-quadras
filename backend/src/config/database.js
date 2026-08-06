@@ -12,11 +12,25 @@ function env(...nomes) {
 
 const logging = process.env.NODE_ENV === "development" && process.env.DB_LOGGING === "true" ? console.log : false;
 const databaseUrl = env("DATABASE_URL");
+const dbSsl = process.env.DB_SSL === "true";
+
+const sslConfig = dbSsl
+  ? {
+      ssl: true,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
+    }
+  : {};
 
 const sequelize = databaseUrl
   ? new Sequelize(databaseUrl, {
       dialect: "postgres",
       logging,
+      ...sslConfig,
     })
   : new Sequelize(
       env("DB_NAME", "DB_DATABASE", "POSTGRES_DB"),
@@ -27,6 +41,7 @@ const sequelize = databaseUrl
         port: Number(env("DB_PORT", "POSTGRES_PORT") || 5432),
         dialect: "postgres",
         logging,
+        ...sslConfig,
       },
     );
 
