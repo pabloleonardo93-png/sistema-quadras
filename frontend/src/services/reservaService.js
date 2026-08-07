@@ -75,6 +75,24 @@ export async function buscarStatusReserva(id) {
   return response.reserva;
 }
 
+export async function listarMinhasReservas() {
+  const response = await api.get("/reservas/minhas", undefined, { auth: false });
+  return response.reservas || [];
+}
+
+export async function buscarMinhaReserva(id) {
+  const response = await api.get(`/reservas/minhas/${id}`, undefined, { auth: false });
+  return response.reserva;
+}
+
+export async function cancelarMinhaReserva(id) {
+  return api.post(`/reservas/minhas/${id}/cancelar`, {}, { auth: false });
+}
+
+export async function atualizarDadosMinhaReserva(id, dados) {
+  return api.patch(`/reservas/minhas/${id}/dados`, dados);
+}
+
 export async function confirmarReserva(id) {
   const response = await api.patch(`/reservas/${id}/confirmar`);
   return response;

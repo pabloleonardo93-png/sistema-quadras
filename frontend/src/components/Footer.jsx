@@ -6,6 +6,7 @@ const footerLinks = [
   { label: "Espaço", href: "/#sobre" },
   { label: "Quadras", href: "/#quadras" },
   { label: "Reservas", href: "/reserva" },
+  { label: "Minhas reservas", href: "/minhas-reservas" },
   { label: "Eventos", href: "/#eventos" },
   { label: "Contato", href: "/#contato" },
 ];

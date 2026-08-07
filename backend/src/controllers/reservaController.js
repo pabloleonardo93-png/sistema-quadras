@@ -1,6 +1,14 @@
 import Reserva from "../models/Reserva.js";
 import { anexarExpiracaoPagamento } from "../services/mercadoPagoService.js";
-import { alterarStatusDaReserva, criarReserva, inclusoesReserva } from "../services/reservaService.js";
+import {
+  alterarStatusDaReserva,
+  atualizarDadosDaMinhaReserva,
+  cancelarMinhaReserva,
+  criarReserva,
+  inclusoesReserva,
+  listarMinhasReservas,
+  obterMinhaReserva,
+} from "../services/reservaService.js";
 import ErroDaAplicacao from "../utils/ErroDaAplicacao.js";
 import executarAssincrono from "../utils/executarAssincrono.js";
 import { validarData, validarId, validarStatus } from "../utils/validacoes.js";
@@ -60,6 +68,39 @@ export const statusPublico = executarAssincrono(async (req, res) => {
       ...anexarExpiracaoPagamento(reserva),
     },
   });
+});
+
+export const listarMinhas = executarAssincrono(async (req, res) => {
+  const reservas = await listarMinhasReservas({ email: req.emailVerificado.email });
+  res.json({ reservas });
+});
+
+export const buscarMinhaPorId = executarAssincrono(async (req, res) => {
+  const reserva = await obterMinhaReserva({
+    id: req.params.id,
+    email: req.emailVerificado.email,
+  });
+  res.json({ reserva });
+});
+
+export const cancelarMinha = executarAssincrono(async (req, res) => {
+  const reserva = await cancelarMinhaReserva({
+    id: req.params.id,
+    emailVerificado: req.emailVerificado.email,
+    enderecoIp: req.ip,
+  });
+  res.json({ mensagem: "Reserva cancelada com sucesso.", reserva });
+});
+
+export const atualizarMeusDados = executarAssincrono(async (req, res) => {
+  const cliente = await atualizarDadosDaMinhaReserva({
+    id: req.params.id,
+    emailVerificado: req.emailVerificado.email,
+    nome: req.body.nome,
+    telefone: req.body.telefone,
+    enderecoIp: req.ip,
+  });
+  res.json({ mensagem: "Dados atualizados com sucesso.", cliente });
 });
 
 export const buscarPorId = executarAssincrono(async (req, res) => {

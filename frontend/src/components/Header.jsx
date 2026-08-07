@@ -5,6 +5,7 @@ import { brand } from "../constants/brand";
 const links = [
   { label: "Quadras", href: "#quadras" },
   { label: "Reservas", href: "#quadras-disponiveis" },
+  { label: "Minhas reservas", href: "/minhas-reservas" },
   { label: "Espaço", href: "#sobre" },
   { label: "Eventos", href: "#eventos" },
   { label: "Contato", href: "#contato" },

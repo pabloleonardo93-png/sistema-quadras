@@ -13,6 +13,7 @@ import PrivateRoute from "./PrivateRoute";
 import PagamentoRetorno from "../pages/PagamentoRetorno";
 import PrivacyCookiesPage from "../pages/PrivacyCookiesPage";
 import ReservaPage from "../pages/ReservaPage";
+import MinhasReservas from "../pages/MinhasReservas";
 
 function protectedPage(page) {
   return <PrivateRoute>{page}</PrivateRoute>;
@@ -25,6 +26,7 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/reserva" element={<ReservaPage />} />
         <Route path="/reserva/dados" element={<ReservaPage />} />
+        <Route path="/minhas-reservas" element={<MinhasReservas />} />
         <Route path="/pagamento/retorno" element={<PagamentoRetorno />} />
         <Route path="/privacidade-e-cookies" element={<PrivacyCookiesPage />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
