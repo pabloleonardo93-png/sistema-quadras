@@ -7,7 +7,6 @@ import {
   CreditCard,
   ExternalLink,
   LogOut,
-  Pencil,
   Plus,
   QrCode,
   RefreshCw,
@@ -22,7 +21,6 @@ import {
   encerrarSessaoEmail,
 } from "../services/emailVerificationService";
 import {
-  atualizarDadosMinhaReserva,
   buscarMinhaReserva,
   cancelarMinhaReserva,
   listarMinhasReservas,
@@ -81,8 +79,6 @@ export default function MinhasReservas() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [customer, setCustomer] = useState({ nome: "", telefone: "" });
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -110,10 +106,6 @@ export default function MinhasReservas() {
     try {
       const reservation = await buscarMinhaReserva(id);
       setDetails(reservation);
-      setCustomer({
-        nome: reservation.cliente?.nome || "",
-        telefone: reservation.cliente?.telefone || "",
-      });
     } catch (requestError) {
       if (!handleSessionExpired(requestError)) {
         setError(requestError.message || "Nao foi possivel carregar a reserva.");
@@ -178,32 +170,7 @@ export default function MinhasReservas() {
 
   const selectReservation = (id) => {
     setSelectedId(id);
-    setEditing(false);
     void loadDetails(id);
-  };
-
-  const saveCustomer = async (event) => {
-    event.preventDefault();
-    if (!details) return;
-    setBusyAction(true);
-    setError("");
-    setFeedback("");
-    try {
-      const response = await atualizarDadosMinhaReserva(details.id, customer);
-      setDetails((current) => ({ ...current, cliente: { ...current.cliente, ...response.cliente } }));
-      setReservations((current) => current.map((reservation) => ({
-        ...reservation,
-        cliente: reservation.cliente ? { ...reservation.cliente, ...response.cliente } : reservation.cliente,
-      })));
-      setEditing(false);
-      setFeedback("Nome e telefone atualizados.");
-    } catch (requestError) {
-      if (!handleSessionExpired(requestError)) {
-        setError(requestError.message || "Nao foi possivel atualizar os dados.");
-      }
-    } finally {
-      setBusyAction(false);
-    }
   };
 
   const cancelReservation = async () => {
@@ -402,18 +369,8 @@ export default function MinhasReservas() {
                         <section className="my-reservation-customer">
                           <header>
                             <span><UserRound aria-hidden="true" size={19} /> Dados do cliente</span>
-                            {!editing && <button type="button" onClick={() => setEditing(true)}><Pencil aria-hidden="true" size={16} /> Editar</button>}
                           </header>
-                          {editing ? (
-                            <form onSubmit={saveCustomer}>
-                              <label>Nome<input value={customer.nome} onChange={(event) => setCustomer((current) => ({ ...current, nome: event.target.value }))} /></label>
-                              <label>Telefone<input type="tel" value={customer.telefone} onChange={(event) => setCustomer((current) => ({ ...current, telefone: event.target.value }))} /></label>
-                              <span>E-mail verificado<strong>{details.cliente?.email}</strong></span>
-                              <div><button type="button" onClick={() => setEditing(false)}>Cancelar</button><button type="submit" disabled={busyAction}>Salvar dados</button></div>
-                            </form>
-                          ) : (
-                            <div><span><small>Nome</small><strong>{details.cliente?.nome}</strong></span><span><small>Telefone</small><strong>{details.cliente?.telefone}</strong></span><span><small>E-mail</small><strong>{details.cliente?.email}</strong></span></div>
-                          )}
+                          <div><span><small>Nome</small><strong>{details.cliente?.nome}</strong></span><span><small>Telefone</small><strong>{details.cliente?.telefone}</strong></span><span><small>E-mail</small><strong>{details.cliente?.email}</strong></span></div>
                         </section>
 
                         <footer className="my-reservation-actions">

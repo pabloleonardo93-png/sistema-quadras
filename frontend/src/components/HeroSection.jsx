@@ -22,7 +22,7 @@ export function HeroSection({ onExploreCourts, onReserve }) {
     if (!ticker) return undefined;
 
     const textItems = Array.from(
-      ticker.querySelectorAll(".hero__ticker-text"),
+      ticker.querySelectorAll(".hero__ticker-track--desktop .hero__ticker-text"),
     );
     const media = gsap.matchMedia();
     const context = gsap.context(() => {
@@ -30,8 +30,6 @@ export function HeroSection({ onExploreCourts, onReserve }) {
         {
           canAnimate: "(prefers-reduced-motion: no-preference)",
           reduceMotion: "(prefers-reduced-motion: reduce)",
-          compactMobile: "(max-width: 520px)",
-          compactTablet: "(max-width: 760px)",
         },
         ({ conditions }) => {
           gsap.set(textItems, {
@@ -45,6 +43,7 @@ export function HeroSection({ onExploreCourts, onReserve }) {
           const visibleItems = textItems.filter(
             (item) => item.getClientRects().length > 0,
           );
+          if (visibleItems.length === 0) return undefined;
 
           const timeline = gsap.timeline({
             repeat: -1,
@@ -162,11 +161,22 @@ export function HeroSection({ onExploreCourts, onReserve }) {
         aria-label="Destaques do complexo"
         ref={tickerRef}
       >
-        <div className="hero__ticker-track">
+        <div className="hero__ticker-track hero__ticker-track--desktop">
           {tickerItems.map((item) => (
             <span className="hero__ticker-item" key={item}>
               <span className="hero__ticker-text">{item}</span>
             </span>
+          ))}
+        </div>
+        <div className="hero__ticker-track hero__ticker-track--mobile" aria-hidden="true">
+          {[0, 1].map((copy) => (
+            <div className="hero__ticker-group" key={copy}>
+              {tickerItems.map((item) => (
+                <span className="hero__ticker-item" key={`${copy}-${item}`}>
+                  <span className="hero__ticker-text">{item}</span>
+                </span>
+              ))}
+            </div>
           ))}
         </div>
       </div>
