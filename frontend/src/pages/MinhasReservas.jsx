@@ -263,9 +263,11 @@ export default function MinhasReservas() {
             <a className="brand brand--reservation brand--image" href="/" aria-label={`${brand.name}, inicio`}>
               <img className="brand__logo-image" src="/images/logo/logo-pe-na-areia-header-white.png" alt={brand.name} />
             </a>
-            <a className="my-reservations-header__back" href="/reserva">
-              <Plus aria-hidden="true" size={19} />
-              Nova reserva
+            <a className="button button--primary my-reservations-header__back" href="/reserva">
+              <span>
+                <Plus aria-hidden="true" size={19} />
+                Nova reserva
+              </span>
             </a>
           </header>
 

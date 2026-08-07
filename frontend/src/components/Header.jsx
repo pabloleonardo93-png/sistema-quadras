@@ -67,30 +67,30 @@ export function Header({ onReserve }) {
         ))}
         <a
           className="button button--primary site-nav__mobile-cta"
-          href="/minhas-reservas"
-          onClick={closeMenu}
-        >
-          <span>Minhas reservas</span>
-        </a>
-        <a
-          className="button button--primary site-nav__mobile-cta"
           href={reservationHash}
           onClick={handleReserveClick}
         >
           <span>Reservar agora</span>
         </a>
+        <a
+          className="button button--primary site-nav__mobile-cta"
+          href="/minhas-reservas"
+          onClick={closeMenu}
+        >
+          <span>Minhas reservas</span>
+        </a>
       </nav>
 
       <div className="site-header__actions">
-        <a className="button button--primary site-header__cta" href="/minhas-reservas">
-          <span>Minhas reservas</span>
-        </a>
         <a
           className="button button--primary site-header__cta"
           href={reservationHash}
           onClick={handleReserveClick}
         >
           <span>Reservar quadra</span>
+        </a>
+        <a className="button button--primary site-header__cta" href="/minhas-reservas">
+          <span>Minhas reservas</span>
         </a>
       </div>
 
