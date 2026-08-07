@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://p01--sistema-quadras--cr64hqzzr75z.code.run/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
