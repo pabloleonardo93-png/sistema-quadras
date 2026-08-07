@@ -3502,6 +3502,10 @@ html.site-intro-active .hero__title-word {
     text-shadow: none;
   }
 
+  .site-header--scrolled .site-nav > a:not(.site-nav__mobile-cta) {
+    color: var(--muted-strong);
+  }
+
   .site-nav > a::after {
     display: none;
   }
@@ -3516,6 +3520,13 @@ html.site-intro-active .hero__title-word {
     color: var(--ink);
     font-size: 0.9rem;
     font-weight: 700;
+  }
+
+  .site-header--scrolled .site-nav > .site-nav__mobile-cta,
+  .site-nav > .site-nav__mobile-cta {
+    border: 0;
+    background: var(--green-700);
+    color: var(--white);
   }
 
   .site-nav__mobile-cta + .site-nav__mobile-cta {
@@ -4596,7 +4607,7 @@ html.site-intro-active .hero__title-word {
 
   .movement-story__intro {
     gap: 18px;
-    padding: 76px 0 34px;
+    padding: 34px 0;
   }
 
   .movement-story__intro h2 {
