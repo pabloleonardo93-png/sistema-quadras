@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound, MailCheck, RefreshCw } from "lucide-react";
+import { KeyRound, Mail, MailCheck, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import {
   confirmarCodigoEmail,
   solicitarCodigoEmail,
@@ -57,51 +57,74 @@ export function EmailVerificationAccess({ onVerified }) {
   return (
     <section className="my-reservations-access" aria-labelledby="access-title">
       <span className="my-reservations-access__icon">
-        <MailCheck aria-hidden="true" size={24} />
+        <MailCheck aria-hidden="true" size={30} />
       </span>
       <div className="my-reservations-access__copy">
-        <p>Verificacao de acesso</p>
         <h2 id="access-title">Confirme seu e-mail</h2>
-        <span>Use o mesmo e-mail informado na reserva. Nenhuma senha e necessaria.</span>
+        <span>
+          Informe o mesmo e-mail utilizado na reserva.
+          <br />
+          Enviaremos um código de acesso — nenhuma senha é necessária.
+        </span>
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
         <label>
           E-mail
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-              setRequestInfo(null);
-              setCode("");
-            }}
-            disabled={busy}
-            placeholder="voce@email.com"
-          />
+          <span className="my-reservations-access__field">
+            <Mail aria-hidden="true" size={19} />
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setRequestInfo(null);
+                setCode("");
+              }}
+              disabled={busy}
+              placeholder="voce@email.com"
+            />
+          </span>
         </label>
         {requestInfo && (
           <label>
-            Codigo recebido
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-              disabled={busy}
-              placeholder="000000"
-            />
+            Código recebido
+            <span className="my-reservations-access__field">
+              <KeyRound aria-hidden="true" size={19} />
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                disabled={busy}
+                placeholder="000000"
+              />
+            </span>
           </label>
         )}
-        <Button type="submit" disabled={busy || !email.trim() || Boolean(requestInfo && code.length !== 6)}>
-          {requestInfo ? <KeyRound aria-hidden="true" size={18} /> : <RefreshCw aria-hidden="true" size={18} />}
-          {busy ? "Aguarde..." : requestInfo ? "Validar codigo" : "Enviar codigo"}
+        <Button
+          className="my-reservations-access__submit"
+          type="submit"
+          disabled={busy || !email.trim() || Boolean(requestInfo && code.length !== 6)}
+        >
+          {busy ? (
+            <RefreshCw className="my-reservations-access__spinner" aria-hidden="true" size={18} />
+          ) : requestInfo ? (
+            <KeyRound aria-hidden="true" size={18} />
+          ) : (
+            <Send aria-hidden="true" size={18} />
+          )}
+          {busy ? "Aguarde..." : requestInfo ? "Validar código" : "Enviar código"}
         </Button>
       </form>
 
       {feedback && <p className="my-reservations-feedback" role="status">{feedback}</p>}
       {error && <p className="my-reservations-error" role="alert">{error}</p>}
+      <p className="my-reservations-access__security">
+        <ShieldCheck aria-hidden="true" size={19} />
+        Seu e-mail é usado somente para localizar suas reservas.
+      </p>
     </section>
   );
 }

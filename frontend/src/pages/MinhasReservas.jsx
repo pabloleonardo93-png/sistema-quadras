@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
   CalendarDays,
   Check,
   Clock3,
@@ -9,6 +8,7 @@ import {
   ExternalLink,
   LogOut,
   Pencil,
+  Plus,
   QrCode,
   RefreshCw,
   Trash2,
@@ -258,27 +258,45 @@ export default function MinhasReservas() {
   return (
     <>
       <main className="my-reservations-page">
-        <header className="page-shell my-reservations-header">
-          <a className="brand brand--reservation brand--image" href="/" aria-label={`${brand.name}, inicio`}>
-            <img className="brand__logo-image" src="/images/logo/logo-pe-na-areia-header-white.png" alt={brand.name} />
-          </a>
-          <a className="my-reservations-header__back" href="/reserva">
-            <ArrowLeft aria-hidden="true" size={18} />
-            Nova reserva
-          </a>
-        </header>
+        <section className="my-reservations-hero">
+          <header className="page-shell my-reservations-header">
+            <a className="brand brand--reservation brand--image" href="/" aria-label={`${brand.name}, inicio`}>
+              <img className="brand__logo-image" src="/images/logo/logo-pe-na-areia-header-white.png" alt={brand.name} />
+            </a>
+            <a className="my-reservations-header__back" href="/reserva">
+              <Plus aria-hidden="true" size={19} />
+              Nova reserva
+            </a>
+          </header>
+
+          <div className="page-shell my-reservations-title">
+            <p>Área do cliente</p>
+            <h1>MINHAS RESERVAS</h1>
+            <span>Consulte seus horários, acompanhe pagamentos e gerencie suas reservas.</span>
+          </div>
+        </section>
 
         <section className="page-shell my-reservations-workspace">
-          <div className="my-reservations-title">
-            <p>Area do cliente</p>
-            <h1>MINHAS RESERVAS</h1>
-            <span>Consulte seus horarios, acompanhe pagamentos e mantenha seus dados atualizados.</span>
-          </div>
-
           {sessionLoading ? (
             <p className="my-reservations-state" role="status">Verificando seu acesso...</p>
           ) : !session?.verificado ? (
-            <EmailVerificationAccess onVerified={(response) => setSession({ ...response, verificado: true })} />
+            <div className="my-reservations-access-stage">
+              <EmailVerificationAccess onVerified={(response) => setSession({ ...response, verificado: true })} />
+              <div className="my-reservations-benefits" aria-label="Benefícios do acesso">
+                <article>
+                  <span><Check aria-hidden="true" size={22} /></span>
+                  <div><strong>Seguro</strong><p>Seus dados protegidos.</p></div>
+                </article>
+                <article>
+                  <span><Clock3 aria-hidden="true" size={22} /></span>
+                  <div><strong>Rápido</strong><p>Acesso em poucos segundos.</p></div>
+                </article>
+                <article>
+                  <span><CalendarDays aria-hidden="true" size={22} /></span>
+                  <div><strong>Completo</strong><p>Todas as suas reservas em um só lugar.</p></div>
+                </article>
+              </div>
+            </div>
           ) : (
             <>
               <div className="my-reservations-session">
