@@ -1,223 +1,166 @@
-# Pe na Areia - Sistema de Quadras
+# Pé na Areia — Sistema de Quadras
 
-Sistema web para apresentacao publica do clube Pe na Areia, reserva de quadras,
-validacao de e-mail, pagamento via Mercado Pago e painel administrativo.
+Sistema full stack desenvolvido para apoiar a operação do clube Pé na Areia.
+A aplicação reúne a apresentação institucional, o fluxo de reservas dos
+clientes, pagamentos pelo Mercado Pago e um painel administrativo para a
+equipe do clube.
 
-O repositorio e dividido em dois projetos principais:
-
-- `frontend/`: aplicacao React + Vite.
-- `backend/`: API REST Node.js + Express + Sequelize + PostgreSQL.
-
-Tambem ha um `docker-compose.yml` na raiz para executar o ambiente com
-PostgreSQL, backend, frontend/Nginx e WUD para acompanhar atualizacoes de
-imagens Docker.
+O projeto é formado por uma aplicação React e uma API REST em Node.js. O
+ambiente completo pode ser executado com Docker Compose, incluindo PostgreSQL,
+Nginx e os serviços de apoio à publicação.
 
 ## Funcionalidades
 
-- Site publico com apresentacao da estrutura, quadras, espaco, eventos e contato.
-- Fluxo publico de reserva de quadra.
-- Validacao de e-mail antes da reserva.
-- Pagamento por Pix direto e cartao via checkout do Mercado Pago.
-- Webhook do Mercado Pago para atualizacao de status do pagamento.
-- Banner de consentimento de cookies e pagina de privacidade.
-- Painel administrativo para reservas, quadras, modalidades, horarios,
-  clientes, comunicados, relatorios e logs.
-- Controle de envio de codigo de verificacao por e-mail com rate limit
-  persistente por e-mail e por IP.
+### Área do cliente
+
+- apresentação do clube, das quadras, dos eventos e dos canais de contato;
+- consulta de horários e reserva de quadras;
+- verificação de e-mail antes da criação da reserva;
+- pagamento por Pix ou cartão com Mercado Pago;
+- acompanhamento do status do pagamento e das reservas;
+- consentimento de cookies e página de privacidade.
+
+### Painel administrativo
+
+- gestão de reservas, quadras, modalidades e horários;
+- consulta e gestão de clientes;
+- publicação de comunicados;
+- relatórios operacionais e registros de ações do sistema;
+- envio e controle de arquivos.
+
+### Regras e segurança
+
+- autenticação administrativa com JWT e senhas protegidas com bcrypt;
+- validação de origem, CORS e cabeçalhos de segurança com Helmet;
+- limites persistentes por e-mail e IP nos fluxos sensíveis;
+- proteção contra reservas duplicadas na aplicação e no PostgreSQL;
+- validação de assinatura, valor, moeda e referência nos webhooks de pagamento;
+- sessão temporária de e-mail verificado em cookie HttpOnly.
 
 ## Tecnologias
 
-- React 19, Vite e React Router.
-- Node.js 20, Express 5 e Sequelize.
-- PostgreSQL.
-- JWT, bcrypt, Helmet e CORS.
-- Resend para envio de e-mail.
-- Mercado Pago para pagamentos.
-- Docker Compose, Nginx e WUD.
+| Camada | Tecnologias |
+| --- | --- |
+| Frontend | React 19, Vite, React Router e GSAP |
+| Backend | Node.js 20, Express 5 e Sequelize |
+| Banco de dados | PostgreSQL 17 |
+| Integrações | Mercado Pago e Resend |
+| Infraestrutura | Docker Compose, Nginx, GitHub Actions e WUD |
+| Qualidade | ESLint e testes nativos do Node.js |
 
-## Estrutura
+## Arquitetura
+
+O navegador acessa o frontend servido pelo Nginx. As requisições para `/api`
+são encaminhadas à API Express, que concentra as regras de negócio e persiste
+os dados no PostgreSQL. Mercado Pago e Resend são acessados somente pelo
+backend; suas credenciais não ficam disponíveis no código do frontend.
+
+Os principais fluxos estão separados em controllers, services, models,
+middlewares e routes. As alterações do banco são controladas por migrations e
+os dados iniciais do ambiente por seeders.
 
 ```text
 .
-|-- backend/
-|   |-- src/
-|   |-- test/
-|   |-- package.json
-|   `-- README.md
-|-- frontend/
-|   |-- src/
-|   |-- public/
-|   |-- package.json
-|   `-- README.md
-|-- nginx/
-|-- docker-compose.yml
-|-- Dockerfile
-`-- README.md
+├── backend/
+│   ├── src/
+│   ├── test/
+│   ├── Dockerfile
+│   └── package.json
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   └── package.json
+├── nginx/
+├── .github/workflows/
+├── docker-compose.yml
+└── Dockerfile
 ```
 
-## Requisitos
+## Como executar com Docker
 
-- Node.js 20 ou mais recente.
-- npm.
-- Docker e Docker Compose, caso va rodar o ambiente completo em containers.
-- PostgreSQL local ou containerizado.
+### Requisitos
 
-## Variaveis de ambiente
+- Docker com suporte ao Docker Compose;
+- portas `8080` e `3000` disponíveis no computador.
 
-Use um arquivo `.env` na raiz do projeto para configuracoes locais ou de
-producao. Esse arquivo nao deve ser versionado.
-
-Principais variaveis usadas pelo backend e pelo Docker Compose:
-
-```env
-NODE_ENV=production
-CORS_ORIGIN=https://seu-dominio.com
-
-POSTGRES_DB=sistema_quadras
-POSTGRES_USER=usuario
-POSTGRES_PASSWORD=senha
-
-JWT_SECRET=chave_longa_e_segura
-JWT_EXPIRES_IN=1d
-
-ADMIN_SEED_NAME=Administrador
-ADMIN_SEED_EMAIL=admin@seudominio.com
-ADMIN_SEED_PASSWORD=senha_segura
-
-APP_PUBLIC_URL=https://seu-dominio.com
-API_PUBLIC_URL=https://seu-dominio.com
-TRUST_PROXY_HOPS=2
-
-MERCADO_PAGO_ACCESS_TOKEN=access_token_de_producao
-MERCADO_PAGO_WEBHOOK_URL=https://seu-dominio.com/api/webhooks/mercadopago
-MERCADO_PAGO_WEBHOOK_SECRET=segredo_do_webhook
-
-RESEND_API_KEY=chave_do_resend
-RESEND_FROM_EMAIL="Pe na Areia <reservas@seudominio.com>"
-EMAIL_FROM="Pe na Areia <reservas@seudominio.com>"
-RESEND_TEMPLATE_VERIFICACAO_ID=id_do_template
-
-EMAIL_VERIFICATION_PROVIDER=resend
-EMAIL_VERIFICATION_RESEND_SECONDS=60
-EMAIL_VERIFICATION_RATE_WINDOW_MINUTES=60
-EMAIL_VERIFICATION_MAX_SENDS_PER_EMAIL=5
-EMAIL_VERIFICATION_MAX_SENDS_PER_IP=30
-```
-
-Para desenvolvimento local do frontend, `VITE_API_URL` e opcional. Por padrao,
-o Vite usa `/api` e encaminha as chamadas para o backend local.
-
-## Rodar localmente
-
-Instale as dependencias do backend:
+Crie o arquivo local de configuração a partir do exemplo:
 
 ```bash
-cd backend
-npm install
+cp .env.example .env
 ```
 
-Instale as dependencias do frontend:
+No Windows, também é possível copiar o arquivo pelo Explorador ou executar:
 
-```bash
-cd ../frontend
-npm install
+```powershell
+Copy-Item .env.example .env
 ```
 
-Suba o banco de dados pela raiz, se for usar Docker:
-
-```bash
-cd ..
-docker compose up -d postgres
-```
-
-Rode migrations e seeders:
-
-```bash
-cd backend
-npm run db:migrate
-npm run db:seed
-```
-
-Inicie o backend:
-
-```bash
-npm run dev
-```
-
-Em outro terminal, inicie o frontend:
-
-```bash
-cd frontend
-npm run dev
-```
-
-URLs locais padrao:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
-- API: `http://localhost:3000/api`
-
-## Docker Compose
-
-Para rodar o ambiente completo pela raiz:
+Antes de iniciar, substitua no `.env` as senhas e chaves marcadas para troca.
+Depois, execute:
 
 ```bash
 docker compose up --build
 ```
 
-Servicos principais:
+No ambiente local, os endereços padrão são:
 
-- `postgres`: banco PostgreSQL.
-- `backend`: API Node.js.
-- `frontend`: build do React servido por Nginx.
-- `wud`: monitor de atualizacoes de imagens Docker.
+- sistema: `http://localhost:8080`;
+- API: `http://localhost:8080/api`;
+- painel administrativo: `http://localhost:8080/admin/login`.
 
-O frontend e publicado pela porta configurada em `FRONTEND_BIND`, com padrao
-`127.0.0.1:8080`.
+As migrations e os seeders são executados na inicialização do backend. Para
+encerrar os containers sem apagar os dados locais:
 
-## Scripts
+```bash
+docker compose down
+```
 
-Backend:
+## Como executar em desenvolvimento
+
+Suba somente o PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+Instale e inicie o backend:
 
 ```bash
 cd backend
-npm run dev
-npm start
-npm test
-npm run lint
+npm ci
 npm run db:migrate
 npm run db:seed
-npm run db:reset
+npm run dev
 ```
 
-Frontend:
+Em outro terminal, instale e inicie o frontend:
 
 ```bash
 cd frontend
+npm ci
 npm run dev
-npm run build
-npm run preview
-npm run lint
 ```
 
-## Pagamentos
+Nesse modo, o frontend abre em `http://localhost:5173` e a API responde em
+`http://localhost:3000/api`. Se necessário, ajuste as URLs no `.env` para esse
+cenário.
 
-O token do Mercado Pago deve ficar somente no backend ou no `.env` usado pelo
-Docker Compose. Nunca coloque o Access Token no frontend.
+## Variáveis de ambiente
 
-Fluxos principais:
+O arquivo [`.env.example`](.env.example) contém as configurações usadas pelo
+Docker Compose e as principais opções do backend. Copie o arquivo para `.env`
+e mantenha credenciais reais somente no ambiente local ou nos secrets da
+plataforma de publicação.
 
-- Pix direto: `POST /api/pagamentos/mercadopago/pix/criar`.
-- Cartao via checkout: `POST /api/pagamentos/mercadopago/criar`.
-- Webhook: `POST /api/webhooks/mercadopago`.
+As integrações externas são opcionais no desenvolvimento:
 
-No painel do Mercado Pago, configure a URL de webhook de producao apontando para:
+- use `EMAIL_VERIFICATION_PROVIDER=mock` para testar sem enviar e-mails;
+- mantenha as variáveis do Mercado Pago vazias enquanto o pagamento não for
+  utilizado;
+- em produção, configure um `MERCADO_PAGO_WEBHOOK_SECRET` próprio e uma
+  `JWT_SECRET` longa e aleatória.
 
-```text
-https://seu-dominio.com/api/webhooks/mercadopago
-```
-
-## Validacao antes de enviar alteracoes
+## Testes e qualidade
 
 Backend:
 
@@ -235,7 +178,11 @@ npm run lint
 npm run build
 ```
 
-## Documentacao detalhada
+O workflow do GitHub Actions executa essas verificações em Pull Requests. A
+publicação das imagens no GitHub Container Registry ocorre somente em pushes
+para a branch `main` após a aprovação de todas as etapas de qualidade.
 
-- Backend: `backend/README.md`
-- Frontend: `frontend/README.md`
+## Documentação detalhada
+
+- [Documentação do backend](backend/README.md)
+- [Documentação do frontend](frontend/README.md)
